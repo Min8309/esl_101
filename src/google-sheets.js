@@ -1,11 +1,11 @@
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 export function noteRows(cards) {
   return [
-    ['카드 ID','표현','뜻','학습 메모','암기 메모 (날짜별)','영상 링크','시작 시간(초)','출처','생성 시각','복습 횟수','다음 복습일','복습 완료일','꼭 외울 문장','암기 완료'],
+    ['카드 ID','표현','뜻','학습 메모','암기 메모 (날짜별)','영상 링크','시작 시간(초)','출처','생성 시각','복습 횟수','다음 복습일','복습 완료일','꼭 외울 문장','암기 완료','수집 카테고리','형광펜 색상'],
     ...cards.map(c => [c.id,c.text,c.meaning||'',c.note||'',
       (c.memoEntries||[]).map(m=>`${new Date(m.created).toISOString()}\n${m.text}`).join('\n\n'),
       c.url||'',c.start??0,c.source||'',new Date(c.created).toISOString(),c.reviews??0,c.next||'',
-      (c.reviewDates||[]).join(', '),c.mustMemorize?'예':'아니요',c.memorized?'예':'아니요'])
+      (c.reviewDates||[]).join(', '),c.mustMemorize?'예':'아니요',c.memorized?'예':'아니요',c.category||'일반',c.highlightColor||''])
   ];
 }
 let loading;
@@ -47,7 +47,7 @@ export async function exportNotes(token,cards,fetcher=fetch) {
     return res.json();
   }
   const created=await api('',{properties:{title:`말줍 메모 ${new Date().toISOString()}`},
-    sheets:[{properties:{sheetId:0,title:'메모',gridProperties:{rowCount:Math.max(1000,values.length),columnCount:14,frozenRowCount:1}}}]});
+    sheets:[{properties:{sheetId:0,title:'메모',gridProperties:{rowCount:Math.max(1000,values.length),columnCount:values[0].length,frozenRowCount:1}}}]});
   const url=`https://docs.google.com/spreadsheets/d/${encodeURIComponent(created.spreadsheetId)}/edit`;
   try {
     await api(`/${encodeURIComponent(created.spreadsheetId)}:batchUpdate`,{requests:[{updateCells:{

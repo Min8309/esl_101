@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {noteRows,exportNotes} from '../src/google-sheets.js';
-const card={id:'one',text:'=IMPORTXML("example")',meaning:'뜻',note:'여러 줄\n메모',created:0,start:12,reviews:2,next:'2026-10-22',memoEntries:[{text:'날짜 메모',created:0}],reviewDates:['2026-10-21'],mustMemorize:true};
+const card={id:'one',text:'=IMPORTXML("example")',meaning:'뜻',note:'여러 줄\n메모',created:0,start:12,reviews:2,next:'2026-10-22',memoEntries:[{text:'날짜 메모',created:0}],reviewDates:['2026-10-21'],mustMemorize:true,category:'단어',highlightColor:'yellow'};
 test('export includes learning notes, dated memos and review state without changing cards',()=>{
  const original=structuredClone(card),rows=noteRows([card]);
- assert.equal(rows.length,2);assert.equal(rows[0].length,14);assert.equal(rows[1].length,14);
+ assert.equal(rows.length,2);assert.equal(rows[0].length,16);assert.equal(rows[1].length,16);
  assert.equal(rows[1][3],'여러 줄\n메모');assert.match(rows[1][4],/1970-01-01T00:00:00.000Z\n날짜 메모/);
- assert.equal(rows[1][11],'2026-10-21');assert.equal(rows[1][12],'예');assert.deepEqual(card,original);
+ assert.equal(rows[1][11],'2026-10-21');assert.equal(rows[1][12],'예');assert.equal(rows[1][14],'단어');assert.equal(rows[1][15],'yellow');assert.deepEqual(card,original);
 });
 test('creates a private account file then writes literal strings rather than formulas',async()=>{
  const calls=[];
