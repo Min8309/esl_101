@@ -33,11 +33,11 @@ export function createAppServer({transcript=loadTranscript}={}) {
     }
     try {
       const data=await readFile(assetPath(root,pathname));
-      res.writeHead(200,{'Content-Type':({'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[extname(pathname==='/'?'index.html':pathname)]||'application/octet-stream'});res.end(data);
+      res.writeHead(200,{'Cache-Control':'no-store','Content-Type':({'.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[extname(pathname==='/'?'index.html':pathname)]||'application/octet-stream'});res.end(data);
     } catch {res.writeHead(404);res.end('Not found');}
   });
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const port=process.env.PORT||3000;
-  createAppServer().listen(port,'0.0.0.0',()=>console.log(`말줍: http://localhost:${port}`));
+  createAppServer().listen(port,'0.0.0.0',()=>console.log(`말줍: http://localhost:${port}\n실행 폴더: ${root}`));
 }

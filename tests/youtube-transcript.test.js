@@ -18,7 +18,7 @@ test('HTTP endpoint returns timestamped subtitles and still serves the app and a
  const result={title:'영상',url,language:'en',automatic:true,cues:[{start:12.3,text:'Hello & welcome'}]};
  await withServer(async(u,lang)=>{assert.equal(u,url);assert.equal(lang,'en');return result;},async base=>{
   const r=await post(base,{url,language:'en'});assert.equal(r.status,200);assert.deepEqual(await r.json(),result);
-  for(const path of ['/','/src/app.js','/src/style.css'])assert.equal((await fetch(base+path)).status,200);
+  for(const path of ['/','/src/app.js','/src/style.css','/assets/maljup-logo.png']){const asset=await fetch(base+path);assert.equal(asset.status,200);assert.equal(asset.headers.get('cache-control'),'no-store');if(path.endsWith('.png')){assert.equal(asset.headers.get('content-type'),'image/png');assert.deepEqual([...new Uint8Array(await asset.arrayBuffer()).slice(0,8)],[137,80,78,71,13,10,26,10]);}}
   assert.equal((await fetch(base+'/missing')).status,404);
  });
 });
