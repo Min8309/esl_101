@@ -39,7 +39,7 @@ function freeURLs(){mediaURLs.forEach(URL.revokeObjectURL);mediaURLs=[]}function
 function cardHTML(c){return `<button class="card" data-card="${esc(c.id)}"><span class="tag">${c.reviews===3?'3일 복습 완료':due(c)?'오늘 복습':c.reviews+'/3일 복습'}</span><span class="category-badge ${COLORS.includes(c.highlightColor)?'ink-'+c.highlightColor:''}">${esc(c.category||'일반')}</span><h3>${esc(c.text)}</h3><p>${esc(c.meaning||'나만의 뜻을 추가해 보세요.')}</p><div class="card-bottom"><span>${esc(c.source||'직접 작성')}</span><span>${recordings.filter(r=>r.cardId===c.id).length?'♬ 녹음 있음':'↗ 표현 열기'}</span></div></button>`}
 function gridHTML(list){return `<div class="grid">${list.length?list.map(cardHTML).join(''):'<div class="empty">아직 표현이 없어요. 좋아하는 문장 하나로 시작해 보세요.</div>'}</div>`}
 function heading(title,sub,action=true){return `<div class="heading"><div><div class="eyebrow">COLLECT YOUR FAVORITE WORDS</div><h1>${title}</h1><p class="muted">${sub}</p></div>${action?'<button class="primary" data-new>＋ 표현 추가</button>':''}</div>`}
-const workspace=new TranscriptWorkspace({getCards:()=>cards,persist:record=>put('scripts',record),notify:toast,collect:async items=>{
+const workspace=new TranscriptWorkspace({remove:async id=>deleteCards([id]),getCards:()=>cards,persist:record=>put('scripts',record),notify:toast,collect:async items=>{
  let count=0;
  const known=[...cards],fresh=[];
  for(const item of items){

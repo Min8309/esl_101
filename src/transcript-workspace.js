@@ -49,10 +49,10 @@ function restoreSelection(root,segments){
 }
 
 export class TranscriptWorkspace{
- constructor({persist,collect,notify,getCards=()=>[]}){this.memoDraft='';this.mobileToolsOpen=false;this.collectorOpen=false;this.getCards=getCards;this.persist=persist;this.collect=collect;this.notify=notify;this.palette=structuredClone(DEFAULT_PALETTE);this.color='yellow';this.filter='';this.only=false;this.query='';this.doc=null;this.selection=[];this.saving=false;this.queue=Promise.resolve();if(typeof document!=='undefined')document.addEventListener('selectionchange',()=>{if(this.root?.isConnected)this.capture(false);});}
+ constructor({persist,collect,notify,remove=async()=>{},getCards=()=>[]}){this.mobileCardId='';this.remove=remove;this.mobileToolsOpen=false;this.collectorOpen=false;this.getCards=getCards;this.persist=persist;this.collect=collect;this.notify=notify;this.palette=structuredClone(DEFAULT_PALETTE);this.color='yellow';this.filter='';this.only=false;this.query='';this.doc=null;this.selection=[];this.saving=false;this.queue=Promise.resolve();if(typeof document!=='undefined')document.addEventListener('selectionchange',()=>{if(this.root?.isConnected)this.capture(false);});}
  setDocument(data,stored){
   this.doc={id:scriptKey(data),data,highlights:(stored?.highlights||[]).filter(h=>validSegments(data.cues,h.segments)),updated:Date.now()};
-  this.query='';this.filter='';this.only=false;this.selection=[];this.memoDraft='';
+  this.query='';this.filter='';this.only=false;this.selection=[];this.mobileCardId='';
  }
  persistDocument(){
   this.doc.updated=Date.now();const snapshot=structuredClone(this.doc);
@@ -88,16 +88,18 @@ export class TranscriptWorkspace{
  }
  bind(){
   this.root=document.querySelector('#scriptWorkspace');if(!this.root)return;
-  if(!this.root.querySelector('#mobileScriptTools'))this.root.insertAdjacentHTML('beforeend',`<button type="button" class="mobile-script-tools-toggle" data-mobile-tools aria-controls="mobileScriptTools" aria-expanded="false">✎ 형광펜·메모</button><aside id="mobileScriptTools" class="mobile-script-tools" aria-label="형광펜 및 메모 수집 패널"><div class="mobile-tools-heading"><strong>형광펜 · 메모 수집</strong><button type="button" data-close-tools aria-label="메모 패널 닫기">닫기 ×</button></div><section class="mobile-memo-pad script-dropzone" aria-label="선택 문장 메모 수집판"><p class="mobile-selection-preview">${escape(selectionText(this.selection)||'스크립트의 단어나 문장을 선택하세요.')}</p><button type="button" class="mobile-selection-drag" draggable="true" data-drag-selection>↘ 선택 내용 끌어 담기</button><p class="mobile-drop-hint">여기에 끌어놓아 수집</p><label>메모<textarea data-selection-memo maxlength="3000" rows="2" placeholder="문장과 함께 저장할 메모">${escape(this.memoDraft)}</textarea></label><button type="button" class="primary" data-quick-collect>선택 문장 담기</button></section></aside>`);
+  if(!this.root.querySelector('#mobileScriptTools'))this.root.insertAdjacentHTML('beforeend',`<button type="button" class="mobile-script-tools-toggle" data-mobile-tools aria-controls="mobileScriptTools" aria-expanded="false">✎ 형광펜·메모</button><aside id="mobileScriptTools" class="mobile-script-tools" aria-label="형광펜 및 메모 수집 패널"><div class="mobile-tools-heading"><strong>형광펜 · 메모 수집</strong><button type="button" data-close-tools aria-label="메모 패널 닫기">닫기 ×</button></div><div class="mobile-ink-dots" role="group" aria-label="형광펜 색상">${this.palette.map(p=>`<button type="button" class="mobile-ink-dot ink-${p.color}" data-ink="${p.color}" aria-label="${escape(p.name)} 형광펜" title="${escape(p.name)}" aria-pressed="${this.color===p.color}"></button>`).join('')}</div><section class="mobile-memo-pad script-dropzone" aria-label="선택 문장 메모 수집판"><div class="mobile-memo-content"><p class="mobile-selection-preview mobile-selection-drag" draggable="true" data-drag-selection>${escape(selectionText(this.selection)||'단어나 문장을 선택해 끌어놓으세요.')}</p><div class="mobile-collected-sentences">${this.getCards().filter(c=>sameVideo(c.url,this.doc.data.url)).map(c=>`<button type="button" data-mobile-sentence="${escape(c.id)}" aria-pressed="${this.mobileCardId===c.id}">${escape(c.text)}</button>`).join('')}</div></div><div class="mobile-memo-actions"><button type="button" class="primary" data-quick-collect>문장 수집</button><button type="button" class="danger" data-delete-sentence>문장 삭제</button></div></section></aside>`);
   this.layoutMobileTools();
   if(!this.resizeTools){this.resizeTools=()=>{if(this.root?.isConnected)this.layoutMobileTools();};window.addEventListener('resize',this.resizeTools);}
   this.root.onmouseup=e=>{if(e.target.closest('.script-text'))this.capture(true);};
   this.root.onkeyup=e=>{if(e.key==='Shift'&&e.target.closest('.script-text'))this.capture(true);};
-  this.root.onmousedown=e=>{if(e.target.closest('[data-ink],[data-mark-selection],[data-collect-selection],[data-mobile-tools],[data-quick-collect],[data-drag-selection]'))e.preventDefault();};
+  this.root.onmousedown=e=>{if(e.target.closest('[data-ink],[data-mark-selection],[data-collect-selection],[data-mobile-tools],[data-quick-collect],[data-drag-selection],[data-delete-sentence]'))e.preventDefault();};
   if(!this.closeToolsOnEscape){this.closeToolsOnEscape=e=>{if(e.key==='Escape'&&this.root?.isConnected&&this.mobileToolsOpen&&window.matchMedia('(max-width:720px)').matches){this.mobileToolsOpen=false;this.layoutMobileTools();this.root.querySelector('[data-mobile-tools]').focus();}};document.addEventListener('keydown',this.closeToolsOnEscape);}
+  this.root.onpointerdown=e=>{if(e.pointerType==='touch'&&e.target.closest('[data-mobile-sentence]'))e.preventDefault();};
+  this.root.onpointerup=e=>{if(e.pointerType==='touch'&&e.target.closest('[data-mobile-sentence]')){e.preventDefault();this.handleClick(e).catch(()=>this.notify('문장을 선택하지 못했습니다.'));}};
   this.root.onclick=e=>this.handleClick(e).catch(()=>this.notify('작업에 실패했습니다. 브라우저 저장 공간을 확인하세요.'));
   this.root.onchange=e=>this.handleChange(e).catch(()=>this.notify('설정을 저장하지 못했습니다.'));
-  this.root.oninput=e=>{if(e.target.hasAttribute('data-selection-memo'))this.memoDraft=e.target.value;if(e.target.id==='scriptSearch'){this.query=e.target.value;this.filterRows();}};
+  this.root.oninput=e=>{if(e.target.id==='scriptSearch'){this.query=e.target.value;this.filterRows();}};
   this.root.ondragstart=e=>{
    const target=e.target.nodeType===1?e.target:e.target.parentElement;
    const record=target?.closest('[data-drag-highlight]');let h;
@@ -157,7 +159,7 @@ export class TranscriptWorkspace{
   this.saving=true;
   this.root?.querySelectorAll('[data-collect-selection],[data-collect-highlight],[data-collect-highlights]').forEach(b=>b.disabled=true);
   try{
-   const items=records.map(h=>({text:selectionText(h.segments),start:this.doc.data.cues[h.segments[0].cue].start,url:this.doc.data.url,source:this.doc.data.title,note:this.memoDraft,category:this.palette.find(p=>p.color===h.color).name,highlightColor:h.color}));
+   const items=records.map(h=>({text:selectionText(h.segments),start:this.doc.data.cues[h.segments[0].cue].start,url:this.doc.data.url,source:this.doc.data.title,note:'',category:this.palette.find(p=>p.color===h.color).name,highlightColor:h.color}));
    const count=await this.collect(items);
    this.paint();const status=this.root?.querySelector('.ink-status');if(status)status.textContent=`${count}개를 수집했습니다. 같은 문장·영상·시각·분류의 카드는 중복 저장하지 않습니다.`;
   }finally{const status=this.root?.querySelector('.ink-status')?.textContent;this.saving=false;this.paint();const message=this.root?.querySelector('.ink-status');if(message&&status)message.textContent=status;}
@@ -166,7 +168,9 @@ export class TranscriptWorkspace{
   const b=e.target.closest('button');if(!b)return;
   if(b.hasAttribute('data-mobile-tools')||b.hasAttribute('data-close-tools')){this.capture(false);this.mobileToolsOpen=b.hasAttribute('data-mobile-tools')?!this.mobileToolsOpen:false;if(this.mobileToolsOpen){this.collectorOpen=true;this.root.querySelector('#collectorBody').classList.add('is-open');this.root.querySelector('[data-toggle-collector]').setAttribute('aria-expanded','true');this.root.querySelector('[data-toggle-collector] span').textContent='접기 ↑';}this.layoutMobileTools();if(!this.mobileToolsOpen)this.root.querySelector('[data-mobile-tools]').focus();return;}
   if(b.hasAttribute('data-toggle-collector')){this.collectorOpen=!this.collectorOpen;this.paint();return;}
-  if(b.dataset.ink){this.color=b.dataset.ink;const current=this.capture(false);if(current.length)this.mark(current);else this.paint();}
+  if(b.dataset.mobileSentence){this.mobileCardId=b.dataset.mobileSentence;this.paint();return;}
+  if(b.hasAttribute('data-delete-sentence')){if(this.mobileCardId){const id=this.mobileCardId;await this.remove(id);this.mobileCardId='';}else{this.selection=[];window.getSelection()?.removeAllRanges();}this.paint();return;}
+  if(b.dataset.ink){this.color=b.dataset.ink;const current=this.capture(false),parts=current.length?current:this.selection;if(parts.length)this.mark(parts);else this.paint();}
   if(b.hasAttribute('data-mark-selection')){const current=this.capture(false),parts=current.length?current:this.selection;if(parts.length)this.mark(parts);else this.notify('스크립트에서 먼저 텍스트를 선택하세요.');}
   if(b.hasAttribute('data-collect-selection')||b.hasAttribute('data-quick-collect')){const parts=this.capture(false);if(parts.length)await this.collectRecords([{segments:parts,color:this.color}]);else if(this.selection.length)await this.collectRecords([{segments:this.selection,color:this.color}]);else this.notify('스크립트에서 먼저 텍스트를 선택하세요.');}
   if(b.hasAttribute('data-collect-highlights'))await this.collectRecords(this.doc.highlights.filter(h=>!this.filter||h.color===this.filter));
