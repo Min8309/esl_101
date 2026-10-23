@@ -1350,3 +1350,8 @@ display:block}}
 .mobile-script-tools .collector-body.is-open{max-height:none;overflow:visible}
 .mobile-script-tools .script-help{font-size:12px}
 }
+
+.push-card input{max-width:100%}
+.push-reminder{border-top:1px solid var(--soft-mint);padding:14px 0;overflow-wrap:anywhere}
+#pushSettings .actions{flex-wrap:wrap}
+#pushSettings input{max-width:100%;font-family:monospace}

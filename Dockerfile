@@ -12,7 +12,11 @@ RUN --mount=type=secret,id=proxy_ca \
     && /opt/venv/bin/pip install --no-cache-dir -r requirements-youtube.txt \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --chown=node:node package.json index.html server.mjs server-path.mjs youtube-transcript.mjs ./
+COPY package.json package-lock.json ./
+RUN --mount=type=secret,id=proxy_ca \
+    if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi \
+    && npm ci --omit=dev --ignore-scripts
+COPY --chown=node:node index.html manifest.webmanifest sw.js server.mjs server-path.mjs youtube-transcript.mjs push-service.mjs ./
 COPY --chown=node:node src/ ./src/
 COPY --chown=node:node assets/ ./assets/
 COPY --chown=node:node scripts/youtube_transcript.py ./scripts/youtube_transcript.py
@@ -20,6 +24,7 @@ COPY --chown=node:node scripts/youtube_transcript.py ./scripts/youtube_transcrip
 ENV NODE_ENV=production \
     PORT=10000 \
     PYTHON_BIN=/opt/venv/bin/python
+RUN mkdir -p /var/data && chown node:node /var/data
 USER node
 EXPOSE 10000
 CMD ["node", "server.mjs"]

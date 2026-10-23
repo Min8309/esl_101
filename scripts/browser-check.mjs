@@ -43,6 +43,14 @@ try{
  await page.locator('[data-important]').click();assert.equal(await page.locator('[data-important]').isChecked(),false);assert.equal(await page.locator('#stop').isEnabled(),true);
  await page.locator('#stop').click();await page.locator('#saveRecording').waitFor();await page.locator('#saveRecording').click();await page.waitForFunction(()=>document.querySelectorAll('#cardRecordings audio').length===1);assert.equal((await read('recordings')).length,1);await page.locator('#detail [data-close]').click();
  await page.locator('[data-view=settings]').click();await verifySheetsExport(page);
+ // A collected card is scheduled with its snapshot; no notification permission is needed on the PC.
+ await page.locator('[data-push-action=create]').click();await page.waitForFunction(()=>document.querySelector('#pushGroupKey').value.length===43);
+ let reservation;
+ await page.route('**/api/push/reminders',async route=>{reservation=route.request().postDataJSON();await route.fulfill({status:201,json:{id:'test-reservation'}});});
+ await page.locator('nav [data-view=library]').click();await page.locator('.card').first().click();
+ await page.locator('#pushWhen').fill(new Date(Date.now()+3600000).toISOString().slice(0,16));
+ await page.locator('[data-push-action=schedule]').click();await page.waitForFunction(()=>document.querySelector('#pushCardStatus').textContent.includes('예약했습니다'));
+ assert.equal(reservation.card.text,'Hello');assert.ok(reservation.when);await page.locator('#detail [data-close]').click();
  // The logo navigates back, and delayed caption requests cannot recreate cleared data.
  await page.locator('.brand').click();await page.locator('#homeYoutubeForm').waitFor();let release,started;const seen=new Promise(r=>started=r);
  await page.unroute('**/api/youtube-transcript');await page.route('**/api/youtube-transcript',async r=>{started();await new Promise(resolve=>release=resolve);try{await r.fulfill({json:fixture});}catch{}});

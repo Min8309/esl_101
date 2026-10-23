@@ -65,3 +65,7 @@ API는 `GET https://api.supadata.ai/v1/transcript`의 `mode=native`, `text=false
 - `API_FORMAT_ERROR`: 시간 정보가 있는 응답 형식 확인 필요
 
 API 키가 설정되지 않은 개발 환경에서는 모의 응답 테스트만 가능합니다. `/healthz` 성공은 API 키 유효성이나 실제 자막 가져오기 성공을 뜻하지 않습니다.
+
+## 아이폰 웹 푸시 알림
+
+웹 푸시에는 별도의 VAPID 키·영구 Disk·상시 실행 인스턴스 설정이 필요합니다. [아이폰 웹 푸시 설정 안내](iphone-push.md)를 따라 구성하세요. `/api/push/config`의 `enabled`로 서버 설정 여부를 확인할 수 있습니다. `/healthz`는 알림 준비 여부나 실제 휴대폰 수신을 검증하지 않습니다.

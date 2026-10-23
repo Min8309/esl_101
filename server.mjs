@@ -1,3 +1,4 @@
+import {createPushService} from './push-service.mjs';
 import {assetPath} from './server-path.mjs';
 import {loadTranscript,transcriptInput} from './youtube-transcript.mjs';
 import http from 'node:http';
@@ -6,12 +7,16 @@ import {extname,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=dirname(fileURLToPath(import.meta.url));
 
-export function createAppServer({transcript=loadTranscript}={}) {
+export function createAppServer({transcript=loadTranscript,push=null}={}) {
   let importing=false;
   return http.createServer(async(req,res)=>{
     const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
     let pathname;
     try {pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);} catch {res.writeHead(400);res.end('Bad request');return;}
+    if(pathname.startsWith('/api/push/')){
+      if(push)await push.handle(req,res,pathname);else json(pathname==='/api/push/config'?200:503,pathname==='/api/push/config'?{enabled:false}:{error:'서버의 웹 푸시 설정이 필요합니다. Render 환경 변수와 영구 저장 공간을 확인하세요.'});
+      return;
+    }
     if(pathname==='/healthz' && ['GET','HEAD'].includes(req.method)){json(200,{status:'ok'});return;}
     if(pathname==='/api/youtube-transcript') {
       if(req.method!=='POST'){res.setHeader('Allow','POST');json(405,{error:'POST 요청이 필요합니다.'});return;}
@@ -33,13 +38,18 @@ export function createAppServer({transcript=loadTranscript}={}) {
       return;
     }
     try {
-      if(!/^\/(?:index\.html|src\/[A-Za-z0-9_-]+\.(?:js|css)|assets\/[A-Za-z0-9_.-]+\.(?:png|svg|webp|ico))$/.test(pathname==='/'?'/index.html':pathname))throw Error('Not a public asset');
+      if(!/^\/(?:index\.html|sw\.js|manifest\.webmanifest|src\/[A-Za-z0-9_-]+\.(?:js|css)|assets\/[A-Za-z0-9_.-]+\.(?:png|svg|webp|ico))$/.test(pathname==='/'?'/index.html':pathname))throw Error('Not a public asset');
       const data=await readFile(assetPath(root,pathname));
-      res.writeHead(200,{'Cache-Control':'no-store','Content-Type':({'.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[extname(pathname==='/'?'index.html':pathname)]||'application/octet-stream'});res.end(data);
+      res.writeHead(200,{'Cache-Control':'no-store','Content-Type':({'.webmanifest':'application/manifest+json','.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[extname(pathname==='/'?'index.html':pathname)]||'application/octet-stream'});res.end(data);
     } catch {res.writeHead(404);res.end('Not found');}
   });
 }
 if(process.argv[1] && resolve(process.argv[1])===fileURLToPath(import.meta.url)) {
   const port=process.env.PORT||3000;
-  createAppServer().listen(port,'0.0.0.0',()=>console.log(`말줍: http://localhost:${port}\n실행 폴더: ${root}`));
+  let push;
+  try{push=await createPushService();}catch{console.error('[push] setup failed: check VAPID settings and writable persistent directory');}
+  if(!push)console.log('[push] disabled: configure VAPID keys, subject and PUSH_DATA_DIR');
+  const server=createAppServer({push});
+  server.on('close',()=>push?.close());
+  server.listen(port,'0.0.0.0',()=>console.log(`말줍: http://localhost:${port}\n실행 폴더: ${root}`));
 }

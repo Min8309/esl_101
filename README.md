@@ -8,9 +8,10 @@
 
 ## 실행
 
-Node.js 20 이상에서:
+Node.js 24 이상에서:
 
 ```sh
+npm ci
 npm start
 ```
 
@@ -60,7 +61,7 @@ npm test
 - `src/style.css`: 반응형 화면
 - `src/app.js`: IndexedDB, 카드·녹음·백업과 화면 흐름
 - `src/core.js`: 날짜·복습·자막·URL 순수 함수
-- `server.mjs`: 의존성 없는 로컬 정적 서버
+- `server.mjs`: 로컬 정적 서버와 자막·웹 푸시 API
 - `tests/core.test.js`: 핵심 로직 테스트
 
 ## 배포
@@ -100,7 +101,7 @@ HTML/CSS/JavaScript 정적 앱이므로 GitHub Pages에서도 실행 가능합�
 
 ## 유튜브 주소로 자막 불러오기
 
-이 기능에는 Node.js 22 이상 서버와 Python 3.10 이상이 필요합니다. **최초 한 번**, 저장소 폴더에서 다음을 실행합니다. Windows의 Anaconda 프롬프트에서도 사용할 수 있습니다.
+이 기능에는 Node.js 24 이상 서버와 Python 3.10 이상이 필요합니다. **최초 한 번**, 저장소 폴더에서 다음을 실행합니다. Windows의 Anaconda 프롬프트에서도 사용할 수 있습니다.
 
 ```sh
 npm run setup:youtube
@@ -180,3 +181,5 @@ Node.js와 Python을 함께 포함하는 Dockerfile을 제공합니다. Render�
 JSON3 자막을 우선 사용하고 없는 경우 VTT 자막을 읽으며, 자막 요청에 추출 도구가 제공한 HTTP 헤더를 유지합니다. 로그인 쿠키나 인증 정보를 채팅 또는 저장소로 전달하지 마세요. 서버에서 차단된 경우 자막 파일 불러오기 또는 사용자의 로컬 앱에서 비교 확인할 수 있습니다.
 
 Render에서 YouTube 봇 확인으로 자막이 차단되면 [Supadata 자막 API 연결 안내](docs/render-deploy.md#supadata-자막-api-연결-render의-youtube-봇-확인-오류-대응)를 따라 서버 환경 변수에 API 키를 설정하세요. 키는 클라이언트 코드에 포함하지 않습니다.
+
+아이폰 11에서 수집한 문장을 알림으로 받으려면 [아이폰 웹 푸시 설정](docs/iphone-push.md)을 따르세요. iOS 16.4 이상, 홈 화면 설치, Render 상시 실행·영구 Disk·VAPID 키가 필요합니다. 알림 설정을 하지 않아도 기존 기능은 사용할 수 있습니다. `npm run push:keys`는 개인 터미널에서만 실행하고 비밀 키를 공개하지 마세요.
