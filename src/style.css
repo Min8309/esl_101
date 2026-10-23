@@ -937,18 +937,13 @@ letter-spacing:-.8px}
 .dashboard-title p{
 margin:0;
 font-size:12px}
-.dashboard-actions{
-display:flex;
-align-items:center;
-gap:8px;
-flex-shrink:0}
+
 .is-home .transcript-panel{
 margin-top:0}
 @media(max-width:1100px){
 .dashboard-intro{
 flex-wrap:wrap}
-.dashboard-actions{
-margin-left:52px}
+
 }
 @media(max-width:720px){
 .is-home>header{
@@ -966,18 +961,13 @@ font-size:28px}
 .dashboard-title h1{
 font-size:19px;
 letter-spacing:-.6px}
-.dashboard-actions{
-margin-left:0;
-width:100%}
-.dashboard-actions button{
-flex:1;
-padding:11px 10px;
-white-space:nowrap}
+
+
 }
 /* Vertical green logo, centered and framed around its transparent margins. */
 .brand{
 display:block;
-width:100px;
+width:76px;
 max-width:100%;
 aspect-ratio:.64;
 overflow:hidden;
@@ -991,7 +981,7 @@ height:auto;
 transform:translate(-20%,-5%)}
 @media(max-width:720px){
 .brand{
-width:56px;
+width:44px;
 margin:0 auto 12px}
 }
 /* The dashboard introduction stays on the dashboard;
@@ -1151,3 +1141,51 @@ flex:1;
 min-width:0;
 padding:10px}
 }
+
+/* Full-width home masthead and soft mint scrollbars. */
+.is-home{
+--page-gutter:48px}
+.is-home>header{
+margin:0 calc(-1 * var(--page-gutter));
+padding:0 var(--page-gutter);
+border-bottom:0;
+background:var(--soft-mint)}
+.is-home>#content{
+padding-top:0}
+.dashboard-intro{
+display:block;
+margin:0 calc(-1 * var(--page-gutter)) 22px;
+padding:14px var(--page-gutter) 24px;
+border:0;
+border-radius:0;
+background:var(--soft-mint)}
+*{
+scrollbar-width:thin;
+scrollbar-color:var(--soft-mint) #F4F9F5}
+*::-webkit-scrollbar{
+width:8px;
+height:8px}
+*::-webkit-scrollbar-track{
+background:#F4F9F5}
+*::-webkit-scrollbar-thumb{
+background:var(--soft-mint);
+border:2px solid #F4F9F5;
+border-radius:8px}
+*::-webkit-scrollbar-thumb:hover{
+background:var(--seafoam)}
+@media(min-width:1450px){
+.is-home{
+--page-gutter:70px}}
+@media(max-width:1100px){
+.is-home{
+--page-gutter:26px}}
+@media(max-width:720px){
+.is-home{
+--page-gutter:18px}
+.dashboard-intro{
+padding-top:12px;
+padding-bottom:20px;
+margin-bottom:16px}}
+@media(forced-colors:active){
+*{
+scrollbar-color:auto}}
