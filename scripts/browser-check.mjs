@@ -75,6 +75,16 @@ try{
  await phone.evaluate(()=>{const el=document.querySelector('.script-text'),r=document.createRange();r.setStart(el.firstChild,0);r.setEnd(el.firstChild,5);getSelection().removeAllRanges();getSelection().addRange(r);document.dispatchEvent(new Event('selectionchange'));});
  await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools .ink-toolbar').isVisible(),true);assert.equal(await phone.locator('[data-toggle-collector] span').textContent(),'접기 ↑');
  await phone.locator('[data-mark-selection]').tap();await phone.locator('.script-text mark').waitFor();
+ await phone.locator('[data-selection-memo]').fill('모바일 드래그 메모');
+ const board=await phone.locator('#mobileScriptTools').boundingBox();assert.ok(board.x>150&&board.width<220&&board.height<500,'memo pad stays compact at lower right');
+ const handle=await phone.locator('[data-drag-selection]').boundingBox(),pad=await phone.locator('.mobile-memo-pad').boundingBox();
+ const touch=await mobile.newCDPSession(phone),x=handle.x+handle.width/2,y=handle.y+handle.height/2;
+ await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x,y}]});
+ await touch.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:Math.min(y+38,pad.y+pad.height-5)}]});
+ await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+ await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
+ assert.equal(await phone.evaluate(()=>new Promise(resolve=>{const r=indexedDB.open('phrase-garden');r.onsuccess=()=>{const q=r.result.transaction('cards').objectStore('cards').getAll();q.onsuccess=()=>resolve(q.result[0].note);};})), '모바일 드래그 메모');
+ await phone.screenshot({path:'/tmp/maljup-mobile-memo.png'});
  await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
  await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
  await phone.setViewportSize({width:1024,height:844});assert.equal(await phone.locator('#mobileScriptTools').isVisible(),false);assert.equal(await phone.locator('.ink-toolbar').isVisible(),true);assert.equal(await phone.locator('.script-collector').isVisible(),true);

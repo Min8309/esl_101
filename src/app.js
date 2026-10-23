@@ -44,7 +44,7 @@ const workspace=new TranscriptWorkspace({getCards:()=>cards,persist:record=>put(
  const known=[...cards],fresh=[];
  for(const item of items){
   if(known.some(c=>c.text===item.text&&sameVideo(c.url,item.url)&&c.start===item.start&&(c.category||'일반')===item.category))continue;
-  const card={...item,id:crypto.randomUUID(),meaning:'',note:'',created:Date.now(),reviews:0,next:nextDay(day()),mustMemorize:false};
+  const card={...item,id:crypto.randomUUID(),meaning:'',note:item.note||'',created:Date.now(),reviews:0,next:nextDay(day()),mustMemorize:false};
   fresh.push(card);known.push(card);count++;
  }
  if(fresh.length)await new Promise((resolve,reject)=>{const tx=db.transaction('cards','readwrite');fresh.forEach(c=>tx.objectStore('cards').put(c));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
