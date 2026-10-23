@@ -1,5 +1,10 @@
 // Public OAuth identifier; never put a client secret in the browser.
-export const DEFAULT_GOOGLE_CLIENT_ID='417489052087-29ss7hbohvrq77bj5u66dpo1hc8ilvhi.apps.googleusercontent.com';
+export const DEFAULT_GOOGLE_CLIENT_ID='417489052087-bhfv3pft7psmogfvdog9p4cqhr5mr004.apps.googleusercontent.com';
+const RETIRED_DESKTOP_CLIENT_ID='417489052087-29ss7hbohvrq77bj5u66dpo1hc8ilvhi.apps.googleusercontent.com';
+export function resolveGoogleClientId(saved){
+ const value=typeof saved==='string'?saved.trim():'';
+ return !value||value===RETIRED_DESKTOP_CLIENT_ID?DEFAULT_GOOGLE_CLIENT_ID:value;
+}
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 export function noteRows(cards) {
   return [

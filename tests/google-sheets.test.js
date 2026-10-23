@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {noteRows,exportNotes} from '../src/google-sheets.js';
+import {noteRows,exportNotes,resolveGoogleClientId,DEFAULT_GOOGLE_CLIENT_ID} from '../src/google-sheets.js';
 const card={id:'one',text:'=IMPORTXML("example")',meaning:'뜻',note:'여러 줄\n메모',created:0,start:12,reviews:2,next:'2026-10-22',memoEntries:[{text:'날짜 메모',created:0}],reviewDates:['2026-10-21'],mustMemorize:true,category:'단어',highlightColor:'yellow'};
 test('export includes learning notes, dated memos and review state without changing cards',()=>{
  const original=structuredClone(card),rows=noteRows([card]);
@@ -32,4 +32,12 @@ test('write failure reports the already created sheet and never claims success',
  await assert.rejects(exportNotes('token',[card],async()=>++calls===1?{ok:true,json:async()=>({spreadsheetId:'partial'})}:{ok:false,status:403}),e=>{
   assert.match(e.message,/권한/);assert.match(e.sheetUrl,/partial\/edit$/);return true;
  });
+});
+
+
+test('uses the web OAuth client and migrates the retired desktop ID while preserving custom IDs',()=>{
+ assert.equal(resolveGoogleClientId(null),DEFAULT_GOOGLE_CLIENT_ID);
+ assert.equal(resolveGoogleClientId('  '),DEFAULT_GOOGLE_CLIENT_ID);
+ assert.equal(resolveGoogleClientId('417489052087-29ss7hbohvrq77bj5u66dpo1hc8ilvhi.apps.googleusercontent.com'),DEFAULT_GOOGLE_CLIENT_ID);
+ assert.equal(resolveGoogleClientId(' custom.apps.googleusercontent.com '),'custom.apps.googleusercontent.com');
 });
