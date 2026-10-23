@@ -7,3 +7,8 @@ test('SRT and VTT multiline timestamp parsing',()=>{assert.deepEqual(parseSubtit
 test('calendar includes leap day and Sunday-aligned blanks',()=>{const dates=calendarDays(2024,1);assert.equal(dates.length,33);assert.deepEqual(dates.slice(0,4),[null,null,null,null]);assert.equal(dates.at(-1),'2024-02-29')});
 test('review preserves actual dates and legacy records',()=>{const c=review({reviews:1,next:'2026-10-17'},'2026-10-18');assert.deepEqual(c.reviewDates,['2026-10-18']);assert.deepEqual(review(c,'2026-10-19').reviewDates,['2026-10-18','2026-10-19'])});
 test('calendar distinguishes actual activity, planned and overdue reviews',()=>{let c={id:'1',created:new Date('2026-10-16T12:00:00').getTime(),reviews:0,next:'2026-10-17'};assert.equal(calendarEvents([c],'2026-10-16','2026-10-16')[0].type,'learned');assert.equal(calendarEvents([c],'2026-10-19','2026-10-16')[0].type,'planned');assert.equal(calendarEvents([c],'2026-10-20','2026-10-20')[0].type,'overdue');c=review(c,'2026-10-20');assert.equal(calendarEvents([c],'2026-10-20','2026-10-20')[0].type,'reviewed');assert.equal(calendarEvents([c],'2026-10-21','2026-10-20')[0].type,'planned');assert.equal(calendarEvents([{...c,reviews:3}],'2026-10-21','2026-10-20').length,0)});
+
+test('YouTube URL validation rejects unsupported schemes and paths but supports live and short links',()=>{
+ for(const value of ['ftp://youtube.com/watch?v=HWv1x2We9ag','https://user:pass@youtube.com/watch?v=HWv1x2We9ag','https://youtube.com:444/watch?v=HWv1x2We9ag','https://youtube.com/not-a-video?v=HWv1x2We9ag'])assert.equal(videoId(value),null);
+ assert.equal(videoId('https://www.youtube.com/live/HWv1x2We9ag'),'HWv1x2We9ag');
+});

@@ -32,6 +32,7 @@ export function createAppServer({transcript=loadTranscript}={}) {
       return;
     }
     try {
+      if(!/^\/(?:index\.html|src\/[A-Za-z0-9_-]+\.(?:js|css)|assets\/[A-Za-z0-9_.-]+\.(?:png|svg|webp|ico))$/.test(pathname==='/'?'/index.html':pathname))throw Error('Not a public asset');
       const data=await readFile(assetPath(root,pathname));
       res.writeHead(200,{'Cache-Control':'no-store','Content-Type':({'.png':'image/png','.svg':'image/svg+xml','.webp':'image/webp','.ico':'image/x-icon','.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8'})[extname(pathname==='/'?'index.html':pathname)]||'application/octet-stream'});res.end(data);
     } catch {res.writeHead(404);res.end('Not found');}

@@ -24,3 +24,19 @@ test('script backup validation rejects invalid anchors, colors, URLs and palette
  assert.equal(validScriptRecord({id:'palette',palette:[{color:'yellow',name:'word'}]}),false);
  for(const bad of [{...record,data:{...data,language:4}},{...record,data:{...data,cues:[null]}},{...record,highlights:[null]},{id:'palette',palette:[null,null,null,null,null]}])assert.equal(validScriptRecord(bad),false);
 });
+
+test('video identity is shared across canonical, short and timestamp URLs',async()=>{
+ const {sameVideo}=await import('../src/core.js');
+ assert.ok(sameVideo(data.url,'https://youtu.be/HWv1x2We9ag?t=336'));
+ assert.ok(sameVideo(data.url,'https://m.youtube.com/watch?v=HWv1x2We9ag&feature=share'));
+ assert.equal(sameVideo('',undefined),false);
+ const {TranscriptWorkspace}=await import('../src/transcript-workspace.js');
+ const ws=new TranscriptWorkspace({persist:async()=>{},collect:async()=>0,notify:()=>{},getCards:()=>[{id:'saved',text:'Honey',url:'https://youtu.be/HWv1x2We9ag?t=3'}]});
+ ws.setDocument(data);assert.match(ws.innerHTML(),/data-card="saved"/);
+});
+
+test('empty highlight collection does not trigger storage or leave saving enabled',async()=>{
+ const {TranscriptWorkspace}=await import('../src/transcript-workspace.js');
+ const ws=new TranscriptWorkspace({persist:async()=>{},collect:()=>assert.fail('empty collection'),notify:()=>{}});
+ ws.setDocument(data);await ws.collectRecords([]);assert.equal(ws.saving,false);
+});

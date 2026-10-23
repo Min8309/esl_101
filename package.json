@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "test": "node --test",
-    "check": "node --check src/app.js && node --check src/core.js && node --check src/google-sheets.js && node --check server.mjs && node --check server-path.mjs && node --check youtube-transcript.mjs && node --check src/transcript-workspace.js",
-    "setup:youtube": "python -m pip install -r requirements-youtube.txt"
+    "check": "node --check src/app.js && node --check src/core.js && node --check src/google-sheets.js && node --check server.mjs && node --check server-path.mjs && node --check youtube-transcript.mjs && node --check src/transcript-workspace.js && node --check src/html.js",
+    "setup:youtube": "python -m pip install -r requirements-youtube.txt",
+    "test:browser": "node scripts/browser-check.mjs"
   }
 }

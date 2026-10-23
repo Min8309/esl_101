@@ -44,3 +44,10 @@ test('concurrent imports are rejected until the active import completes',async()
   assert.equal((await first).status,200);
  });
 });
+
+test('static server exposes app assets only, never Git metadata or backend files',async()=>{
+ await withServer(()=>assert.fail('extractor not used'),async base=>{
+  for(const path of ['/.git/config','/.git/HEAD','/server.mjs','/package.json','/README.md','/scripts/youtube_transcript.py','/src/../server.mjs'])assert.equal((await fetch(base+path)).status,404);
+  for(const path of ['/src/html.js','/assets/maljup-logo.png'])assert.equal((await fetch(base+path)).status,200);
+ });
+});
