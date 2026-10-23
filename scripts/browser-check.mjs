@@ -38,7 +38,7 @@ try{
  // Common desktop and small-screen widths must not overflow after CSS cleanup.
  for(const width of [1440,1024,768,390,320]){
   await page.setViewportSize({width,height:900});
-  for(const view of ['home','library','script','calendar','review','recordings','checklist']){
+  for(const view of ['home','library','calendar','review','recordings','checklist']){
    await page.locator(`nav [data-view=${view}]`).click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow in ${view} at ${width}`);
   }
  }
@@ -50,7 +50,7 @@ try{
  await phone.evaluate(()=>{const el=document.querySelector('.script-text'),r=document.createRange();r.setStart(el.firstChild,0);r.setEnd(el.firstChild,5);getSelection().removeAllRanges();getSelection().addRange(r);document.dispatchEvent(new Event('selectionchange'));});
  await phone.locator('[data-mark-selection]').tap();await phone.locator('.script-text mark').waitFor();
  await phone.locator('[data-toggle-collector]').tap();await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
- await phone.reload();await phone.locator('nav [data-view=script]').tap();await phone.locator('[data-toggle-collector]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
+ await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-toggle-collector]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
  await mobile.close();
  assert.deepEqual(errors,[]);console.log('PASS desktop/mobile Chromium: permission-close race, recording controls/preview/save, atomic clear during delayed import, logo navigation and 5 responsive widths');
 }finally{await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
