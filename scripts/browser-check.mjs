@@ -59,6 +59,10 @@ try{
  await page.locator('.brand').click();assert.equal(await page.locator('#scriptWorkspace').count(),0);assert.equal(await page.locator('.script-launch').count(),0);assert.equal(await page.locator('#homeYoutubeForm button').isEnabled(),true);
  // Save a fractional timestamp through a real submit click.
  await page.locator('nav [data-view=library]').click();await page.locator('.heading [data-new]').click();await page.locator('#cardForm [name=text]').fill('Fractional time');await page.locator('#cardForm [name=start]').fill('12.345');await page.locator('#cardForm button.primary').click();await page.waitForFunction(()=>!document.querySelector('#editor').open);assert.equal((await read('cards'))[0].start,12.345);
+ // Home-card delete has an independent hit target and preserves confirmation behavior.
+ await page.locator('.brand').click();await page.locator('[data-delete-card]').waitFor();page.removeAllListeners('dialog');
+ page.once('dialog',d=>d.dismiss());await page.locator('[data-delete-card]').click();assert.equal((await read('cards')).length,1);assert.equal(await page.locator('#detail').evaluate(d=>d.open),false);
+ page.once('dialog',d=>d.accept());await page.locator('[data-delete-card]').click();await page.waitForFunction(()=>!document.querySelector('[data-delete-card]'));assert.equal((await read('cards')).length,0);
  // Common desktop and small-screen widths must not overflow after CSS cleanup.
  for(const width of [1440,1024,768,390,320]){
   await page.setViewportSize({width,height:900});
