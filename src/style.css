@@ -974,25 +974,25 @@ flex:1;
 padding:11px 10px;
 white-space:nowrap}
 }
-/* Supplied horizontal logo lockup, framed to remove transparent safe margins. */
+/* Vertical green logo, centered and framed around its transparent margins. */
 .brand{
 display:block;
-width:100%;
-max-width:198px;
-aspect-ratio:2.45;
+width:100px;
+max-width:100%;
+aspect-ratio:.64;
 overflow:hidden;
-margin-bottom:28px;
+margin:0 auto 22px;
 flex-shrink:0}
 .brand-logo{
 display:block;
-width:132%;
+width:169%;
 max-width:none;
 height:auto;
-transform:translate(-13.5%,-13%)}
+transform:translate(-20%,-5%)}
 @media(max-width:720px){
 .brand{
-width:148px;
-margin-bottom:18px}
+width:56px;
+margin:0 auto 12px}
 }
 /* The dashboard introduction stays on the dashboard;
  reading has its own workspace. */
