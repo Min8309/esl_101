@@ -8,6 +8,21 @@ const page=await browser.newPage({viewport:{width:1440,height:1000}});const erro
 const base=`http://127.0.0.1:${server.address().port}`;
 const fixture={title:'Review fixture',url:'https://www.youtube.com/watch?v=HWv1x2We9ag',language:'en',cues:[{start:3,text:'Hello there, a test phrase.'},{start:6,text:'Another test phrase.'}]};
 const read=store=>page.evaluate(store=>new Promise(resolve=>{const r=indexedDB.open('phrase-garden');r.onsuccess=()=>{const db=r.result,q=db.transaction(store).objectStore(store).getAll();q.onsuccess=()=>{resolve(q.result);db.close();};};}),store);
+async function verifySheetsExport(target){
+ const calls=[];
+ await target.evaluate(()=>{window.google={accounts:{oauth2:{hasGrantedAllScopes:()=>true,initTokenClient:options=>({requestAccessToken:()=>options.callback({access_token:'mock-token',expires_in:3600})})}}};});
+ await target.route('https://sheets.googleapis.com/v4/spreadsheets**',async route=>{
+  calls.push(JSON.parse(route.request().postData()));
+  await route.fulfill({json:calls.length===1?{spreadsheetId:'browser-test-sheet'}:{}});
+ });
+ await target.locator('#googleConnect').click();await target.waitForFunction(()=>document.querySelector('#googleConnect').textContent==='Google 계정 연결');
+ await target.locator('#googleConnect').click();await target.waitForFunction(()=>!document.querySelector('#googleExport').disabled);
+ await target.locator('#googleExport').click();await target.waitForFunction(()=>document.querySelector('a[href*="browser-test-sheet"]'));
+ assert.equal(calls.length,2);
+ const cells=calls[1].requests[0].updateCells.rows[1].values;
+ assert.equal(cells[1].userEnteredValue.stringValue,'Hello');assert.equal(cells[14].userEnteredValue.stringValue,'단어');assert.equal(cells[15].userEnteredValue.stringValue,'yellow');
+ assert.ok(await target.getByText('메모를 새 Google 시트에 저장했습니다.',{exact:true}).isVisible());
+}
 await page.addInitScript(()=>{
  window.mockStopped=0;window.permissionRequests=[];
  Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:()=>new Promise((resolve,reject)=>window.permissionRequests.push({resolve:()=>resolve({getTracks:()=>[{stop:()=>window.mockStopped++}]}),reject}))}});
@@ -27,6 +42,7 @@ try{
  await page.locator('.collected-card').click();await page.locator('#record').click();await page.waitForFunction(()=>permissionRequests.length===2);await page.evaluate(()=>permissionRequests[1].resolve());await page.locator('#stop').waitFor({state:'visible'});
  await page.locator('[data-important]').click();assert.equal(await page.locator('[data-important]').isChecked(),false);assert.equal(await page.locator('#stop').isEnabled(),true);
  await page.locator('#stop').click();await page.locator('#saveRecording').waitFor();await page.locator('#saveRecording').click();await page.waitForFunction(()=>document.querySelectorAll('#cardRecordings audio').length===1);assert.equal((await read('recordings')).length,1);await page.locator('#detail [data-close]').click();
+ await page.locator('[data-view=settings]').click();await verifySheetsExport(page);
  // The logo navigates back, and delayed caption requests cannot recreate cleared data.
  await page.locator('.brand').click();await page.locator('#homeYoutubeForm').waitFor();let release,started;const seen=new Promise(r=>started=r);
  await page.unroute('**/api/youtube-transcript');await page.route('**/api/youtube-transcript',async r=>{started();await new Promise(resolve=>release=resolve);try{await r.fulfill({json:fixture});}catch{}});
@@ -43,19 +59,23 @@ try{
   }
  }
  const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
+ phone.on('pageerror',e=>errors.push(e.message));
  await phone.route('**/api/youtube-transcript',r=>r.fulfill({json:fixture}));await phone.goto(base);await phone.locator('#homeYoutubeForm').waitFor();
  assert.equal(await phone.locator('#homeYoutubeForm input[name=url]').evaluate(e=>getComputedStyle(e).fontSize),'16px');
  await phone.locator('#homeYoutubeForm input[name=url]').fill(fixture.url);await phone.locator('#homeYoutubeForm button').tap();await phone.locator('.script-text').first().waitFor();
  assert.equal(await phone.locator('#collectorBody').isVisible(),false);
  await phone.evaluate(()=>{const el=document.querySelector('.script-text'),r=document.createRange();r.setStart(el.firstChild,0);r.setEnd(el.firstChild,5);getSelection().removeAllRanges();getSelection().addRange(r);document.dispatchEvent(new Event('selectionchange'));});
- await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools .ink-toolbar').isVisible(),true);
+ await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools .ink-toolbar').isVisible(),true);assert.equal(await phone.locator('[data-toggle-collector] span').textContent(),'접기 ↑');
  await phone.locator('[data-mark-selection]').tap();await phone.locator('.script-text mark').waitFor();
  await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
  await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
+ await phone.setViewportSize({width:1024,height:844});assert.equal(await phone.locator('#mobileScriptTools').isVisible(),false);assert.equal(await phone.locator('.ink-toolbar').isVisible(),true);assert.equal(await phone.locator('.script-collector').isVisible(),true);
+ await phone.setViewportSize({width:390,height:844});await phone.keyboard.press('Escape');assert.equal(await phone.locator('[data-mobile-tools]').getAttribute('aria-expanded'),'false');await phone.locator('[data-mobile-tools]').tap();
  await phone.locator('[data-close-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools').isVisible(),false);
  assert.equal(await phone.locator('nav button:visible').count(),5);
  await phone.locator('#mobileMenuToggle').tap();assert.equal(await phone.locator('#mobileMore.side-drawer').evaluate(d=>d.open),true);assert.equal(await phone.locator('#mobileMore [data-menu-view]').count(),7);
  await phone.locator('#mobileMore [data-menu-view=settings]').tap();await phone.locator('#googleClientId').waitFor();await phone.waitForFunction(()=>document.querySelector('#mobileMenuToggle').getAttribute('aria-expanded')==='false');
+ await verifySheetsExport(phone);
  await phone.locator('nav [data-view=home]').tap();await phone.locator('#homeYoutubeForm').waitFor();
  await page.setViewportSize({width:1440,height:1000});assert.equal(await page.locator('#mobileMenuToggle').isVisible(),false);assert.equal(await page.locator('#mobileMoreToggle').isVisible(),false);assert.equal(await page.locator('nav button:visible').count(),6);
  await mobile.close();

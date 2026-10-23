@@ -94,6 +94,7 @@ export class TranscriptWorkspace{
   this.root.onmouseup=e=>{if(e.target.closest('.script-text'))this.capture(true);};
   this.root.onkeyup=e=>{if(e.key==='Shift'&&e.target.closest('.script-text'))this.capture(true);};
   this.root.onmousedown=e=>{if(e.target.closest('[data-ink],[data-mark-selection],[data-collect-selection]'))e.preventDefault();};
+  if(!this.closeToolsOnEscape){this.closeToolsOnEscape=e=>{if(e.key==='Escape'&&this.root?.isConnected&&this.mobileToolsOpen&&window.matchMedia('(max-width:720px)').matches){this.mobileToolsOpen=false;this.layoutMobileTools();this.root.querySelector('[data-mobile-tools]').focus();}};document.addEventListener('keydown',this.closeToolsOnEscape);}
   this.root.onclick=e=>this.handleClick(e).catch(()=>this.notify('작업에 실패했습니다. 브라우저 저장 공간을 확인하세요.'));
   this.root.onchange=e=>this.handleChange(e).catch(()=>this.notify('설정을 저장하지 못했습니다.'));
   this.root.oninput=e=>{if(e.target.id==='scriptSearch'){this.query=e.target.value;this.filterRows();}};
@@ -150,7 +151,7 @@ export class TranscriptWorkspace{
  }
  async handleClick(e){
   const b=e.target.closest('button');if(!b)return;
-  if(b.hasAttribute('data-mobile-tools')||b.hasAttribute('data-close-tools')){this.capture(false);this.mobileToolsOpen=b.hasAttribute('data-mobile-tools')?!this.mobileToolsOpen:false;if(this.mobileToolsOpen){this.collectorOpen=true;this.root.querySelector('#collectorBody').classList.add('is-open');this.root.querySelector('[data-toggle-collector]').setAttribute('aria-expanded','true');}this.layoutMobileTools();if(!this.mobileToolsOpen)this.root.querySelector('[data-mobile-tools]').focus();return;}
+  if(b.hasAttribute('data-mobile-tools')||b.hasAttribute('data-close-tools')){this.capture(false);this.mobileToolsOpen=b.hasAttribute('data-mobile-tools')?!this.mobileToolsOpen:false;if(this.mobileToolsOpen){this.collectorOpen=true;this.root.querySelector('#collectorBody').classList.add('is-open');this.root.querySelector('[data-toggle-collector]').setAttribute('aria-expanded','true');this.root.querySelector('[data-toggle-collector] span').textContent='접기 ↑';}this.layoutMobileTools();if(!this.mobileToolsOpen)this.root.querySelector('[data-mobile-tools]').focus();return;}
   if(b.hasAttribute('data-toggle-collector')){this.collectorOpen=!this.collectorOpen;this.paint();return;}
   if(b.dataset.ink){this.color=b.dataset.ink;const current=this.capture(false);if(current.length)this.mark(current);else this.paint();}
   if(b.hasAttribute('data-mark-selection')){const current=this.capture(false),parts=current.length?current:this.selection;if(parts.length)this.mark(parts);else this.notify('스크립트에서 먼저 텍스트를 선택하세요.');}
