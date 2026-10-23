@@ -1,3 +1,5 @@
+// Public OAuth identifier; never put a client secret in the browser.
+export const DEFAULT_GOOGLE_CLIENT_ID='417489052087-29ss7hbohvrq77bj5u66dpo1hc8ilvhi.apps.googleusercontent.com';
 const SCOPE = 'https://www.googleapis.com/auth/drive.file';
 export function noteRows(cards) {
   return [
