@@ -48,9 +48,11 @@ try{
  await phone.locator('#homeYoutubeForm input[name=url]').fill(fixture.url);await phone.locator('#homeYoutubeForm button').tap();await phone.locator('.script-text').first().waitFor();
  assert.equal(await phone.locator('#collectorBody').isVisible(),false);
  await phone.evaluate(()=>{const el=document.querySelector('.script-text'),r=document.createRange();r.setStart(el.firstChild,0);r.setEnd(el.firstChild,5);getSelection().removeAllRanges();getSelection().addRange(r);document.dispatchEvent(new Event('selectionchange'));});
+ await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools .ink-toolbar').isVisible(),true);
  await phone.locator('[data-mark-selection]').tap();await phone.locator('.script-text mark').waitFor();
- await phone.locator('[data-toggle-collector]').tap();await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
- await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-toggle-collector]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
+ await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
+ await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-mobile-tools]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
+ await phone.locator('[data-close-tools]').tap();assert.equal(await phone.locator('#mobileScriptTools').isVisible(),false);
  assert.equal(await phone.locator('nav button:visible').count(),5);
  await phone.locator('#mobileMenuToggle').tap();assert.equal(await phone.locator('#mobileMore.side-drawer').evaluate(d=>d.open),true);assert.equal(await phone.locator('#mobileMore [data-menu-view]').count(),7);
  await phone.locator('#mobileMore [data-menu-view=settings]').tap();await phone.locator('#googleClientId').waitFor();await phone.waitForFunction(()=>document.querySelector('#mobileMenuToggle').getAttribute('aria-expanded')==='false');

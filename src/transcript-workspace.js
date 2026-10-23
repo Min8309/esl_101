@@ -49,7 +49,7 @@ function restoreSelection(root,segments){
 }
 
 export class TranscriptWorkspace{
- constructor({persist,collect,notify,getCards=()=>[]}){this.collectorOpen=false;this.getCards=getCards;this.persist=persist;this.collect=collect;this.notify=notify;this.palette=structuredClone(DEFAULT_PALETTE);this.color='yellow';this.filter='';this.only=false;this.query='';this.doc=null;this.selection=[];this.saving=false;this.queue=Promise.resolve();if(typeof document!=='undefined')document.addEventListener('selectionchange',()=>{if(this.root?.isConnected)this.capture(false);});}
+ constructor({persist,collect,notify,getCards=()=>[]}){this.mobileToolsOpen=false;this.collectorOpen=false;this.getCards=getCards;this.persist=persist;this.collect=collect;this.notify=notify;this.palette=structuredClone(DEFAULT_PALETTE);this.color='yellow';this.filter='';this.only=false;this.query='';this.doc=null;this.selection=[];this.saving=false;this.queue=Promise.resolve();if(typeof document!=='undefined')document.addEventListener('selectionchange',()=>{if(this.root?.isConnected)this.capture(false);});}
  setDocument(data,stored){
   this.doc={id:scriptKey(data),data,highlights:(stored?.highlights||[]).filter(h=>validSegments(data.cues,h.segments)),updated:Date.now()};
   this.query='';this.filter='';this.only=false;this.selection=[];
@@ -61,6 +61,18 @@ export class TranscriptWorkspace{
   return this.queue;
  }
  html(){return '<div id="scriptWorkspace">'+this.innerHTML()+'</div>';}
+ layoutMobileTools(){
+  const mobile=window.matchMedia('(max-width:720px)').matches;
+  const panel=this.root?.querySelector('#mobileScriptTools');if(!panel)return;
+  for(const selector of ['.ink-toolbar','.ink-settings','.script-help','.script-collector']){
+   const node=this.root.querySelector(selector);
+   if(!node._home){node._home=document.createComment('tool position');node.before(node._home);}
+   if(mobile)panel.append(node);else node._home.after(node);
+  }
+  panel.classList.toggle('is-open',mobile&&this.mobileToolsOpen);
+  panel.inert=!mobile||!this.mobileToolsOpen;
+  this.root.querySelector('[data-mobile-tools]').setAttribute('aria-expanded',String(mobile&&this.mobileToolsOpen));
+ }
  innerHTML(){
   if(!this.doc)return '';
   const {data,highlights}=this.doc;
@@ -76,6 +88,9 @@ export class TranscriptWorkspace{
  }
  bind(){
   this.root=document.querySelector('#scriptWorkspace');if(!this.root)return;
+  if(!this.root.querySelector('#mobileScriptTools'))this.root.insertAdjacentHTML('beforeend',`<button type="button" class="mobile-script-tools-toggle" data-mobile-tools aria-controls="mobileScriptTools" aria-expanded="false">✎ 형광펜·메모</button><aside id="mobileScriptTools" class="mobile-script-tools" aria-label="형광펜 및 메모 수집 패널"><div class="mobile-tools-heading"><strong>형광펜 · 메모 수집</strong><button type="button" data-close-tools aria-label="메모 패널 닫기">닫기 ×</button></div></aside>`);
+  this.layoutMobileTools();
+  if(!this.resizeTools){this.resizeTools=()=>{if(this.root?.isConnected)this.layoutMobileTools();};window.addEventListener('resize',this.resizeTools);}
   this.root.onmouseup=e=>{if(e.target.closest('.script-text'))this.capture(true);};
   this.root.onkeyup=e=>{if(e.key==='Shift'&&e.target.closest('.script-text'))this.capture(true);};
   this.root.onmousedown=e=>{if(e.target.closest('[data-ink],[data-mark-selection],[data-collect-selection]'))e.preventDefault();};
@@ -135,6 +150,7 @@ export class TranscriptWorkspace{
  }
  async handleClick(e){
   const b=e.target.closest('button');if(!b)return;
+  if(b.hasAttribute('data-mobile-tools')||b.hasAttribute('data-close-tools')){this.capture(false);this.mobileToolsOpen=b.hasAttribute('data-mobile-tools')?!this.mobileToolsOpen:false;if(this.mobileToolsOpen){this.collectorOpen=true;this.root.querySelector('#collectorBody').classList.add('is-open');this.root.querySelector('[data-toggle-collector]').setAttribute('aria-expanded','true');}this.layoutMobileTools();if(!this.mobileToolsOpen)this.root.querySelector('[data-mobile-tools]').focus();return;}
   if(b.hasAttribute('data-toggle-collector')){this.collectorOpen=!this.collectorOpen;this.paint();return;}
   if(b.dataset.ink){this.color=b.dataset.ink;const current=this.capture(false);if(current.length)this.mark(current);else this.paint();}
   if(b.hasAttribute('data-mark-selection')){const current=this.capture(false),parts=current.length?current:this.selection;if(parts.length)this.mark(parts);else this.notify('스크립트에서 먼저 텍스트를 선택하세요.');}
