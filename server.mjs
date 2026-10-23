@@ -28,7 +28,7 @@ export function createAppServer({transcript=loadTranscript}={}) {
         if(!input || typeof input.url!=='string')throw Object.assign(Error('유튜브 주소를 입력하세요.'),{status:400});
         transcriptInput(input.url,input.language);
         json(200,await transcript(input.url,input.language));
-      } catch(e){json(e.status||502,{error:e.status?e.message:'자막을 가져오지 못했습니다. 잠시 후 다시 시도하세요.'});}
+      } catch(e){json(e.status||502,{error:e.status?e.message:'자막을 가져오지 못했습니다. 잠시 후 다시 시도하세요.',code:e.code});}
       finally{importing=false;}
       return;
     }

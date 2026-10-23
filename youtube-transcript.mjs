@@ -25,6 +25,9 @@ export async function loadTranscript(value, language) {
   }
   let result;
   try { result = JSON.parse(stdout); } catch {throw Object.assign(Error('자막 도구 응답을 읽지 못했습니다.'), {status: 502});}
-  if (result.error) throw Object.assign(Error(result.error), {status: result.code === 'TOOL_MISSING' ? 503 : result.code === 'NO_CAPTIONS' ? 404 : 502});
+  if (result.error) {
+    console.error('[youtube-transcript]',JSON.stringify({video:input.id,phase:result.phase||'setup',code:result.code||'YOUTUBE_UNAVAILABLE'}));
+    throw Object.assign(Error(result.error), {code:result.code,status: result.code === 'TOOL_MISSING' ? 503 : result.code === 'NO_CAPTIONS' ? 404 : result.code === 'RATE_LIMITED' ? 429 : 502});
+  }
   return result;
 }

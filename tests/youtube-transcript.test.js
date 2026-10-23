@@ -58,3 +58,10 @@ test('deployment health check is available without contacting YouTube',async()=>
   const response=await fetch(base+'/healthz');assert.equal(response.status,200);assert.deepEqual(await response.json(),{status:'ok'});
  });
 });
+
+
+test('upstream diagnostic code reaches the client without converting it to missing captions',async()=>{
+ await withServer(async()=>{throw Object.assign(Error('YouTube 서버 요청 제한'),{status:429,code:'RATE_LIMITED'});},async base=>{
+  const response=await post(base,{url});assert.equal(response.status,429);assert.deepEqual(await response.json(),{error:'YouTube 서버 요청 제한',code:'RATE_LIMITED'});
+ });
+});

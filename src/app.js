@@ -72,7 +72,7 @@ function homeTranscriptHTML(){
 async function fetchYoutubeTranscript(url,language,signal){
  const res=await fetch('/api/youtube-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,language}),signal});
  if(!res.headers.get('content-type')?.includes('application/json'))throw Error('자막 가져오기는 npm start로 실행한 앱에서 사용할 수 있습니다.');
- const data=await res.json();if(!res.ok)throw Error(data.error||'자막을 가져오지 못했습니다.');
+ const data=await res.json();if(!res.ok)throw Error((data.error||'자막을 가져오지 못했습니다.')+(data.code?' [오류 코드: '+data.code+']':''));
  if(!Array.isArray(data.cues)||!data.cues.length)throw Error('가져올 자막이 없습니다.');
  return data;
 }
