@@ -1,3 +1,4 @@
+import {microphoneButtonContent} from './recording-ui.js';
 import {escapeHTML as esc} from './html.js';
 export class ArchiveRecorder {
  constructor({getCards,save,notify}) {
@@ -13,12 +14,13 @@ export class ArchiveRecorder {
  get active(){return ['recording','stopping','preview','saving'].includes(this.state);}
  mount(){
   this.root=document.querySelector('#archiveRecorder');if(!this.root)return;
-  this.root.innerHTML=`<h2>바로 녹음하기</h2><p class="muted">학습 카드는 ‘내 표현 수집함’에 저장한 문장입니다. 카드를 연결하거나 자유롭게 녹음하세요.</p><label>연결할 학습 카드<select id="archiveCard"><option value="">카드 없이 자유 녹음</option>${this.getCards().map(c=>`<option value="${esc(c.id)}">${esc(c.text)}</option>`).join('')}</select></label><label>녹음 제목<input id="archiveTitle" maxlength="200" placeholder="예: 오늘의 영어 연습"></label><div class="actions"><button class="primary" data-archive-action="start">● 녹음 시작</button><button class="secondary" data-archive-action="stop" disabled>■ 녹음 종료</button><button class="secondary" data-view="library">학습 카드 보러 가기 →</button></div><p class="muted" data-archive-status role="status">마이크 권한을 허용하고 녹음을 시작하세요. 녹음은 이 브라우저에 저장됩니다.</p><div data-archive-preview></div>`;
+  this.root.innerHTML=`<h2>바로 녹음하기</h2><p class="muted">학습 카드는 ‘내 표현 수집함’에 저장한 문장입니다. 카드를 연결하거나 자유롭게 녹음하세요.</p><label>연결할 학습 카드<select id="archiveCard"><option value="">카드 없이 자유 녹음</option>${this.getCards().map(c=>`<option value="${esc(c.id)}">${esc(c.text)}</option>`).join('')}</select></label><label>녹음 제목<input id="archiveTitle" maxlength="200" placeholder="예: 오늘의 영어 연습"></label><div class="actions"><button class="primary record-trigger" data-archive-action="start">${microphoneButtonContent()}</button><button class="secondary" data-archive-action="stop" disabled>■ 녹음 종료</button><button class="secondary" data-view="library">학습 카드 보러 가기 →</button></div><p class="muted" data-archive-status role="status">마이크 권한을 허용하고 녹음을 시작하세요. 녹음은 이 브라우저에 저장됩니다.</p><div data-archive-preview></div>`;
   this.root.onclick=event=>{const button=event.target.closest('[data-archive-action]');if(!button)return;this.action(button.dataset.archiveAction).catch(()=>this.notify('녹음을 처리하지 못했습니다. 저장 공간을 확인하세요.'));};
  }
  controls(){
   if(!this.root?.isConnected)return;
   const idle=this.state==='idle';
+  const trigger=this.root.querySelector('[data-archive-action=start]');trigger.innerHTML=microphoneButtonContent(this.state==='recording');trigger.classList.toggle('is-recording',this.state==='recording');
   this.root.querySelector('[data-archive-action=start]').disabled=!idle;
   this.root.querySelector('[data-archive-action=stop]').disabled=this.state!=='recording';
   this.root.querySelector('#archiveCard').disabled=!idle;this.root.querySelector('#archiveTitle').disabled=!idle;

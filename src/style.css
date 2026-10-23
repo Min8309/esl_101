@@ -1406,3 +1406,9 @@ display:block}}
 .recording-files{margin-top:28px}
 .recording-files h2 small{color:var(--muted);font-size:13px}
 .recording-files .record strong{display:block;overflow-wrap:anywhere}
+
+button.record-trigger{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:64px;padding:12px 22px;border:1px solid var(--seafoam);border-radius:16px;background:var(--soft-mint);color:var(--primary-ink);font-weight:600}
+button.record-trigger:hover:not(:disabled){background:var(--aqua-breeze)}
+.record-microphone{width:25px;height:34px;flex:none}
+button.record-trigger.is-recording{background:var(--primary);color:#fff;opacity:1}
+button.record-trigger:focus-visible{outline:3px solid var(--teal-mist);outline-offset:3px}
