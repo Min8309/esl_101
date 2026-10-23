@@ -23,7 +23,7 @@ async function verifySheetsExport(target){
  assert.equal(cells[1].userEnteredValue.stringValue,'Hello');assert.equal(cells[14].userEnteredValue.stringValue,'단어');assert.equal(cells[15].userEnteredValue.stringValue,'yellow');
  assert.ok(await target.getByText('메모를 새 Google 시트에 저장했습니다.',{exact:true}).isVisible());
 }
-await page.addInitScript(()=>{
+function mockMicrophone(){
  window.mockStopped=0;window.permissionRequests=[];
  Object.defineProperty(navigator,'mediaDevices',{configurable:true,value:{getUserMedia:()=>new Promise((resolve,reject)=>window.permissionRequests.push({resolve:()=>resolve({getTracks:()=>[{stop:()=>window.mockStopped++}]}),reject}))}});
  window.MediaRecorder=class{
@@ -31,7 +31,25 @@ await page.addInitScript(()=>{
   start(){this.state='recording';}
   stop(){this.state='inactive';setTimeout(()=>{this.ondataavailable?.({data:new Blob(['audio'],{type:'audio/webm'})});this.onstop?.();},0);}
  };
-});
+}
+await page.addInitScript(mockMicrophone);
+async function verifyArchiveRecording(target){
+ await target.locator('nav [data-view=recordings]').click();
+ await target.locator('#archiveTitle').fill('자유 연습 녹음');
+ let requests=await target.evaluate(()=>permissionRequests.length);
+ await target.locator('[data-archive-action=start]').click();await target.waitForFunction(n=>permissionRequests.length===n+1,requests);
+ await target.locator('nav [data-view=home]').click();await target.evaluate(n=>permissionRequests[n].resolve(),requests);
+ await target.waitForFunction(()=>mockStopped>0);assert.equal(await target.locator('#archiveRecorder').count(),0);
+ await target.locator('nav [data-view=recordings]').click();await target.locator('#archiveTitle').fill('자유 연습 녹음');
+ requests=await target.evaluate(()=>permissionRequests.length);
+ await target.locator('[data-archive-action=start]').click();await target.waitForFunction(n=>permissionRequests.length===n+1,requests);await target.evaluate(n=>permissionRequests[n].resolve(),requests);
+ await target.waitForFunction(()=>!document.querySelector('[data-archive-action=stop]').disabled);
+ await target.locator('nav [data-view=home]').click();assert.equal(await target.locator('#archiveRecorder').count(),1);
+ await target.locator('[data-archive-action=stop]').click();await target.locator('[data-archive-action=save]').waitFor();assert.equal(await target.locator('[data-archive-preview] audio').count(),1);
+ await target.locator('[data-archive-action=save]').click();await target.waitForFunction(()=>document.querySelectorAll('#recordingFiles audio').length===1);assert.ok(await target.locator('#recordingFiles').textContent().then(s=>s.includes('자유 연습 녹음')));
+ await target.reload();await target.locator('nav [data-view=recordings]').click();await target.locator('#recordingFiles audio').waitFor();
+ target.once('dialog',d=>d.accept());await target.locator('#recordingFiles [data-delrec]').click();await target.waitForFunction(()=>!document.querySelector('#recordingFiles audio'));
+}
 try{
  await page.route('**/api/youtube-transcript',r=>r.fulfill({json:fixture}));await page.goto(base);await page.locator('#homeYoutubeForm').waitFor();
  await page.locator('#homeYoutubeForm input[name=url]').fill(fixture.url);await page.locator('#homeYoutubeForm button').click();await page.locator('.script-text').first().waitFor();
@@ -63,6 +81,7 @@ try{
  await page.locator('.brand').click();await page.locator('[data-delete-card]').waitFor();page.removeAllListeners('dialog');
  page.once('dialog',d=>d.dismiss());await page.locator('[data-delete-card]').click();assert.equal((await read('cards')).length,1);assert.equal(await page.locator('#detail').evaluate(d=>d.open),false);
  page.once('dialog',d=>d.accept());await page.locator('[data-delete-card]').click();await page.waitForFunction(()=>!document.querySelector('[data-delete-card]'));assert.equal((await read('cards')).length,0);
+ await verifyArchiveRecording(page);
  // Common desktop and small-screen widths must not overflow after CSS cleanup.
  for(const width of [1440,1024,768,390,320]){
   await page.setViewportSize({width,height:900});
@@ -71,6 +90,7 @@ try{
   }
  }
  const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
+ await phone.addInitScript(mockMicrophone);
  phone.on('pageerror',e=>errors.push(e.message));
  await phone.route('**/api/youtube-transcript',r=>r.fulfill({json:fixture}));await phone.goto(base);await phone.locator('#homeYoutubeForm').waitFor();
  assert.equal(await phone.locator('#homeYoutubeForm input[name=url]').evaluate(e=>getComputedStyle(e).fontSize),'16px');
@@ -101,7 +121,7 @@ try{
  assert.equal(await phone.locator('nav button:visible').count(),5);
  await phone.locator('#mobileMenuToggle').tap();assert.equal(await phone.locator('#mobileMore.side-drawer').evaluate(d=>d.open),true);assert.equal(await phone.locator('#mobileMore [data-menu-view]').count(),7);
  await phone.locator('#mobileMore [data-menu-view=settings]').tap();await phone.locator('#googleClientId').waitFor();await phone.waitForFunction(()=>document.querySelector('#mobileMenuToggle').getAttribute('aria-expanded')==='false');
- await verifySheetsExport(phone);
+ await verifySheetsExport(phone);await verifyArchiveRecording(phone);
  await phone.locator('nav [data-view=home]').tap();await phone.locator('#homeYoutubeForm').waitFor();
  await page.setViewportSize({width:1440,height:1000});assert.equal(await page.locator('#mobileMenuToggle').isVisible(),false);assert.equal(await page.locator('#mobileMoreToggle').isVisible(),false);assert.equal(await page.locator('nav button:visible').count(),6);
  await mobile.close();

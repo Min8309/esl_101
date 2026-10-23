@@ -1398,3 +1398,11 @@ display:block}}
 .card-delete:hover,.card-delete:focus-visible{background:#ffe4e0}
 
 .mobile-memo-count{font-size:10px;white-space:nowrap;color:var(--primary-ink)}
+
+#archiveRecorder{margin-top:20px}
+#archiveRecorder .actions{flex-wrap:wrap}
+#archiveRecorder input,#archiveRecorder select{width:100%;max-width:100%}
+#archiveRecorder audio,.recording-files audio{display:block;width:100%;margin:12px 0}
+.recording-files{margin-top:28px}
+.recording-files h2 small{color:var(--muted);font-size:13px}
+.recording-files .record strong{display:block;overflow-wrap:anywhere}
