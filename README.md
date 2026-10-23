@@ -163,3 +163,5 @@ Linux 기본 브라우저 경로는 `/usr/bin/chromium`입니다. 다른 경로�
 Node.js와 Python을 함께 포함하는 Dockerfile을 제공합니다. Render에서 GitHub 저장소를 **Docker Web Service**로 연결하고 Health Check Path에 `/healthz`를 지정하세요. [단계별 배포 안내](docs/render-deploy.md)를 참고하세요. 실제 Render 서비스 생성은 대시보드에서 진행합니다.
 
 배포 앱에는 공개 Google OAuth 클라이언트 ID가 기본 입력됩니다. 별도로 저장한 클라이언트 ID가 있다면 그 값을 우선 사용합니다. Google Cloud에서 `https://esl-101.onrender.com` 원본 허용과 Sheets API 사용 설정은 별도로 완료해야 합니다.
+
+모바일 메뉴는 하단 고정 아이콘 바(홈·수집함·복습·녹음·더보기)와 오른쪽 상단 삼선 버튼으로 제공합니다. 삼선 버튼은 전체 메뉴 리스트를 오른쪽에서 열며 달력·체크리스트·데이터 관리도 포함합니다. PC에서는 기존 왼쪽 메뉴를 사용합니다.

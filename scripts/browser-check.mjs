@@ -39,7 +39,7 @@ try{
  for(const width of [1440,1024,768,390,320]){
   await page.setViewportSize({width,height:900});
   for(const view of ['home','library','calendar','review','recordings','checklist']){
-   await page.locator(`nav [data-view=${view}]`).click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow in ${view} at ${width}`);
+   const target=page.locator(`nav [data-view=${view}]`);if(await target.isVisible())await target.click();else{await page.locator('#mobileMoreToggle').click();await page.locator(`#mobileMore [data-menu-view=${view}]`).click();}assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),`overflow in ${view} at ${width}`);
   }
  }
  const mobile=await browser.newContext({viewport:{width:390,height:844},isMobile:true,hasTouch:true}),phone=await mobile.newPage();
@@ -51,6 +51,11 @@ try{
  await phone.locator('[data-mark-selection]').tap();await phone.locator('.script-text mark').waitFor();
  await phone.locator('[data-toggle-collector]').tap();await phone.locator('[data-collect-highlights]').tap();await phone.waitForFunction(()=>document.querySelector('.collected-card')?.textContent.includes('Hello'));
  await phone.reload();await phone.locator('.script-launch [data-view=script]').tap();await phone.locator('[data-toggle-collector]').tap();assert.equal(await phone.locator('.collected-card').count(),1);
+ assert.equal(await phone.locator('nav button:visible').count(),5);
+ await phone.locator('#mobileMenuToggle').tap();assert.equal(await phone.locator('#mobileMore.side-drawer').evaluate(d=>d.open),true);assert.equal(await phone.locator('#mobileMore [data-menu-view]').count(),7);
+ await phone.locator('#mobileMore [data-menu-view=settings]').tap();await phone.locator('#googleClientId').waitFor();await phone.waitForFunction(()=>document.querySelector('#mobileMenuToggle').getAttribute('aria-expanded')==='false');
+ await phone.locator('nav [data-view=home]').tap();await phone.locator('#homeYoutubeForm').waitFor();
+ await page.setViewportSize({width:1440,height:1000});assert.equal(await page.locator('#mobileMenuToggle').isVisible(),false);assert.equal(await page.locator('#mobileMoreToggle').isVisible(),false);assert.equal(await page.locator('nav button:visible').count(),6);
  await mobile.close();
  assert.deepEqual(errors,[]);console.log('PASS desktop/mobile Chromium: permission-close race, recording controls/preview/save, atomic clear during delayed import, logo navigation and 5 responsive widths');
 }finally{await browser.close();server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}
