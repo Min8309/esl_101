@@ -12,6 +12,7 @@ export function createAppServer({transcript=loadTranscript}={}) {
     const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
     let pathname;
     try {pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);} catch {res.writeHead(400);res.end('Bad request');return;}
+    if(pathname==='/healthz' && ['GET','HEAD'].includes(req.method)){json(200,{status:'ok'});return;}
     if(pathname==='/api/youtube-transcript') {
       if(req.method!=='POST'){res.setHeader('Allow','POST');json(405,{error:'POST 요청이 필요합니다.'});return;}
       const origin=req.headers.origin;

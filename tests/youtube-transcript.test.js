@@ -51,3 +51,10 @@ test('static server exposes app assets only, never Git metadata or backend files
   for(const path of ['/src/html.js','/assets/maljup-logo.png'])assert.equal((await fetch(base+path)).status,200);
  });
 });
+
+
+test('deployment health check is available without contacting YouTube',async()=>{
+ await withServer(()=>assert.fail('health must not invoke extractor'),async base=>{
+  const response=await fetch(base+'/healthz');assert.equal(response.status,200);assert.deepEqual(await response.json(),{status:'ok'});
+ });
+});

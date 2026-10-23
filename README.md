@@ -157,3 +157,7 @@ npm run test:browser
 ```
 
 Linux 기본 브라우저 경로는 `/usr/bin/chromium`입니다. 다른 경로는 `CHROMIUM_PATH`에 지정하세요. Windows/macOS에서는 기본 설치된 Google Chrome을 사용합니다. 검사는 임시 로컬 서버와 별도 브라우저 데이터로 실행하며 기존 사용자 자료를 변경하지 않습니다. 테스트용 자막과 마이크 응답을 사용해 소수점 시작 시간의 실제 폼 저장, 녹음 권한 요청 중 닫기, 녹음 저장, 삭제 중 지연 자막 응답, PC·모바일 화면과 터치 수집을 확인합니다. 실제 YouTube 접근과 실기기 마이크·Google 인증은 별도 확인이 필요합니다.
+
+## Render 배포
+
+Node.js와 Python을 함께 포함하는 Dockerfile을 제공합니다. Render에서 GitHub 저장소를 **Docker Web Service**로 연결하고 Health Check Path에 `/healthz`를 지정하세요. [단계별 배포 안내](docs/render-deploy.md)를 참고하세요. 실제 Render 서비스 생성은 대시보드에서 진행합니다.
