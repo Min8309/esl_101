@@ -178,3 +178,5 @@ Node.js와 Python을 함께 포함하는 Dockerfile을 제공합니다. Render�
 - `CAPTION_FORMAT_ERROR`: 반환된 자막 형식을 읽지 못했습니다.
 
 JSON3 자막을 우선 사용하고 없는 경우 VTT 자막을 읽으며, 자막 요청에 추출 도구가 제공한 HTTP 헤더를 유지합니다. 로그인 쿠키나 인증 정보를 채팅 또는 저장소로 전달하지 마세요. 서버에서 차단된 경우 자막 파일 불러오기 또는 사용자의 로컬 앱에서 비교 확인할 수 있습니다.
+
+Render에서 YouTube 봇 확인으로 자막이 차단되면 [Supadata 자막 API 연결 안내](docs/render-deploy.md#supadata-자막-api-연결-render의-youtube-봇-확인-오류-대응)를 따라 서버 환경 변수에 API 키를 설정하세요. 키는 클라이언트 코드에 포함하지 않습니다.

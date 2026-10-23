@@ -35,3 +35,33 @@ docker run --rm -p 3000:10000 maljup
 ```
 
 브라우저에서 로컬 3000번 포트를 확인합니다. Dockerfile은 관리자 계정 대신 node 사용자로 서버를 실행하고, 웹에 필요한 파일만 이미지에 포함합니다. 데이터베이스 서비스나 API 키는 기본 배포에 필요하지 않습니다. 이 저장소에 배포 설정이 있다는 것과 Render 서비스가 실제 생성·배포됐다는 것은 다릅니다.
+
+## Supadata 자막 API 연결 (Render의 YouTube 봇 확인 오류 대응)
+
+1. [Supadata](https://supadata.ai)에서 계정을 만들고 대시보드에서 API 키를 발급합니다. 현재 요금·크레딧·이용 조건을 확인하세요. Google OAuth 클라이언트 ID와 다른 키입니다.
+2. Render → **esl-101 서비스 → Environment → Add Environment Variable**에 아래 두 항목을 추가합니다.
+
+   | Key | Value |
+   | --- | --- |
+   | `TRANSCRIPT_PROVIDER` | `supadata` |
+   | `SUPADATA_API_KEY` | Supadata에서 발급한 실제 API 키 |
+
+3. **Save, rebuild, and deploy** 또는 **Save and deploy**를 누르고 최신 커밋 배포가 **Live**인지 확인합니다. API 키를 GitHub, 브라우저 입력란, 채팅에 올리지 마세요.
+4. 앱에서 `https://www.youtube.com/watch?v=5skWbChJy-8`를 입력하고 **스크립트 불러오기**를 누릅니다. 영어 자막을 선택하고 시간·문장이 나타나는지 확인합니다. 다른 영상·언어, 형광펜·수집도 확인하세요.
+
+키가 있으면 기본적으로 Supadata를 사용합니다. `TRANSCRIPT_PROVIDER=supadata`를 명시하면 키 누락 시 설정 오류를 표시하며 차단된 로컬 추출기로 돌아가지 않습니다. `TRANSCRIPT_PROVIDER=local`이면 기존 Python 추출기를 사용합니다.
+
+API는 `GET https://api.supadata.ai/v1/transcript`의 `mode=native`, `text=false`로 **기존 자막만** 요청합니다. 별도 AI 생성·번역을 요청하지 않습니다. 영상 주소와 선택 언어가 Supadata에 전달되고 API 이용량이 발생할 수 있습니다. 모든 영상의 성공을 보장하지 않습니다. 제공자가 자막 제작 방식을 알려주지 않으므로 자동/수동 여부를 표시하지 않으며, 추가 메타데이터 조회 비용을 피하기 위해 영상 제목 대신 영상 ID를 표시합니다.
+
+동일 영상·언어는 서버 메모리에 30분, 최대 40개 캐시합니다. 재시작하면 초기화되며 서버 인스턴스 간 공유되지 않습니다. 새 조회는 인스턴스당 분당 10회로 제한합니다. 공개 앱에는 사용자 인증이 없으므로 Supadata 대시보드의 사용량·지출 제한도 설정하세요. 이 제한은 계정 전체 비용 상한을 보장하지 않습니다.
+
+오류 코드:
+
+- `API_KEY_MISSING`: Render 키 설정 누락
+- `API_AUTH_ERROR`: 키·계정 권한 확인
+- `API_QUOTA_EXCEEDED` / `API_RATE_LIMITED`: 크레딧·요금제·요청 한도 확인
+- `NO_CAPTIONS`: 해당 영상·선택 언어의 자막 미제공
+- `API_NETWORK_ERROR` / `API_UPSTREAM_ERROR` / `API_TIMEOUT`: 네트워크·제공자 장애 또는 처리 지연
+- `API_FORMAT_ERROR`: 시간 정보가 있는 응답 형식 확인 필요
+
+API 키가 설정되지 않은 개발 환경에서는 모의 응답 테스트만 가능합니다. `/healthz` 성공은 API 키 유효성이나 실제 자막 가져오기 성공을 뜻하지 않습니다.
