@@ -48,7 +48,7 @@ const workspace=new TranscriptWorkspace({remove:async id=>deleteCards([id]),getC
   fresh.push(card);known.push(card);count++;
  }
  if(fresh.length)await new Promise((resolve,reject)=>{const tx=db.transaction('cards','readwrite');fresh.forEach(c=>tx.objectStore('cards').put(c));tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error);tx.onabort=()=>reject(tx.error);});
- await refresh();if(['home','script'].includes(view))render();toast(`${count}개를 내 표현 수집함에 저장했습니다.`);return count;
+ await refresh();if(['home','script'].includes(view))render();toast(count?`${count}개 문장을 새로 수집했습니다.`:'이미 수집한 문장입니다. 메모장과 내 표현 수집함에서 확인하세요.');return count;
 }});
 async function rememberTranscript(data){
  const saved=await request('scripts','readonly',s=>s.get(scriptKey(data)));

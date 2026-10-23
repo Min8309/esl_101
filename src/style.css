@@ -1396,3 +1396,5 @@ display:block}}
 .card-badges{display:flex;align-items:center;flex-wrap:wrap;gap:5px;padding-right:42px}
 .card-delete{position:absolute;top:10px;right:10px;min-width:44px;min-height:44px;padding:6px;font-size:11px;color:#9c3838;background:#fff4f3;border:1px solid #f0d6d2;border-radius:9px}
 .card-delete:hover,.card-delete:focus-visible{background:#ffe4e0}
+
+.mobile-memo-count{font-size:10px;white-space:nowrap;color:var(--primary-ink)}
