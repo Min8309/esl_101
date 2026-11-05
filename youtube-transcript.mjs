@@ -1,3 +1,4 @@
+import {createTranscriptBudget} from './transcript-budget.mjs';
 import {execFile} from 'node:child_process';
 import {promisify} from 'node:util';
 import {fileURLToPath} from 'node:url';
@@ -41,7 +42,7 @@ function apiError(message, code, status = 502) {
 }
 
 const DAY = 24 * 60 * 60000;
-// Process-local only: these counters are NOT a persistent account spending cap.
+// Optional persistent local budget; never an account-wide spending cap.
 function requestLimit(value, fallback) {
   if (value === undefined) return fallback;
   if (!/^(0|[1-9][0-9]*)$/.test(String(value)) || Number(value) > 100000)
@@ -57,29 +58,31 @@ export function createSupadataLoader({fetcher = globalThis.fetch, now = Date.now
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
   getKey = () => process.env.SUPADATA_API_KEY?.trim(),
   getLimits = () => ({daily: process.env.SUPADATA_DAILY_REQUEST_LIMIT,
-    monthly: process.env.SUPADATA_30_DAY_REQUEST_LIMIT})} = {}) {
+    monthly: process.env.SUPADATA_30_DAY_REQUEST_LIMIT}),
+  budget = createTranscriptBudget(process.env.SUPADATA_BUDGET_PATH)} = {}) {
   const cache = new Map();
   const pending = new Map();
   const failures = new Map();
-  let requests = [];
+
   let pausedUntil = 0;
   function reserve() {
     const configured = getLimits();
     const daily = requestLimit(configured.daily, 5);
     const monthly = requestLimit(configured.monthly, 80);
     const time = now();
-    requests = requests.filter(t => t > time - 30 * DAY);
+
     if (!daily || !monthly) throw apiError('새 자막 불러오기가 잠시 중지되었습니다. 저장된 스크립트나 자막 파일을 이용해 주세요.', 'API_IMPORT_DISABLED', 503);
-    for (const [window, limit, code, label] of [[30 * DAY, monthly, 'API_PERIOD_LIMITED', '최근 30일'], [DAY, daily, 'API_DAILY_LIMITED', '최근 24시간'], [60000, 10, 'API_RATE_LIMITED', '최근 1분']]) {
-      const used = requests.filter(t => t > time - window);
-      if (used.length >= limit) {
-        const remaining = used[used.length - limit] + window - time;
-        const wait = remaining > 3600000 ? `${Math.ceil(remaining / 3600000)}시간` : `${Math.max(1, Math.ceil(remaining / 60000))}분`;
-        throw waitError(`${label} 자막 요청 한도에 도달했습니다. 약 ${wait} 후 다시 시도해 주세요. 그동안 저장된 스크립트·자막 파일을 이용할 수 있습니다.`, code, remaining);
+    budget.reserve(time, requests => {
+      for (const [window, limit, code, label] of [[30 * DAY, monthly, 'API_PERIOD_LIMITED', '최근 30일'], [DAY, daily, 'API_DAILY_LIMITED', '최근 24시간'], [60000, 10, 'API_RATE_LIMITED', '최근 1분']]) {
+        const used = requests.filter(t => t > time - window);
+        if (used.length >= limit) {
+          const remaining = used[used.length - limit] + window - time;
+          const wait = remaining > 3600000 ? `${Math.ceil(remaining / 3600000)}시간` : `${Math.max(1, Math.ceil(remaining / 60000))}분`;
+          throw waitError(`${label} 자막 요청 한도에 도달했습니다. 약 ${wait} 후 다시 시도해 주세요. 그동안 저장된 스크립트·자막 파일을 이용할 수 있습니다.`, code, remaining);
+        }
       }
-    }
-    // Reserve BEFORE every HTTP call, including polling. Never refund failures/timeouts.
-    requests.push(time);
+      // Reserve BEFORE every HTTP call, including polling. Never refund failures/timeouts.
+    });
   }
   return async function load({id, language}) {
     const key = getKey();

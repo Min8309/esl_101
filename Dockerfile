@@ -16,7 +16,7 @@ COPY package.json package-lock.json ./
 RUN --mount=type=secret,id=proxy_ca \
     if [ -f /run/secrets/proxy_ca ]; then export NODE_EXTRA_CA_CERTS=/run/secrets/proxy_ca; fi \
     && npm ci --omit=dev --ignore-scripts
-COPY --chown=node:node index.html manifest.webmanifest sw.js server.mjs server-path.mjs youtube-transcript.mjs push-service.mjs ./
+COPY --chown=node:node index.html manifest.webmanifest sw.js server.mjs server-path.mjs youtube-transcript.mjs transcript-budget.mjs push-service.mjs ./
 COPY --chown=node:node src/ ./src/
 COPY --chown=node:node assets/ ./assets/
 COPY --chown=node:node scripts/youtube_transcript.py ./scripts/youtube_transcript.py

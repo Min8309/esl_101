@@ -1,3 +1,4 @@
+import {createHash, timingSafeEqual} from 'node:crypto';
 import {createPushService} from './push-service.mjs';
 import {assetPath} from './server-path.mjs';
 import {loadTranscript,transcriptInput} from './youtube-transcript.mjs';
@@ -7,12 +8,24 @@ import {extname,dirname,resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 const root=dirname(fileURLToPath(import.meta.url));
 
-export function createAppServer({transcript=loadTranscript,push=null}={}) {
+export function createAppServer({transcript=loadTranscript,push=null,accessPassword=process.env.APP_ACCESS_PASSWORD,bodyTimeoutMs=10000}={}) {
   let importing=false;
-  return http.createServer(async(req,res)=>{
+  return http.createServer({headersTimeout:15000,requestTimeout:20000},async(req,res)=>{
+    res.setHeader('X-Content-Type-Options','nosniff');
+    res.setHeader('X-Frame-Options','DENY');
+    res.setHeader('Referrer-Policy','strict-origin-when-cross-origin');
     const json=(status,data)=>{res.writeHead(status,{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store'});res.end(JSON.stringify(data));};
     let pathname;
     try {pathname=decodeURIComponent(new URL(req.url,'http://localhost').pathname);} catch {res.writeHead(400);res.end('Bad request');return;}
+    if(accessPassword !== undefined && pathname==='/api/youtube-transcript') {
+      if(accessPassword.length<16 || accessPassword.length>256 || !/^[\x20-\x7e]+$/.test(accessPassword)){json(503,{error:'앱 접근 암호 설정을 확인해 주세요.'});return;}
+      const supplied=req.headers['x-transcript-password']||'';
+      const expected=accessPassword;
+      const hash=value=>createHash('sha256').update(value).digest();
+      if(!timingSafeEqual(hash(supplied),hash(expected))) {
+        json(401,{error:'말줍 접근 암호가 필요합니다.'});return;
+      }
+    }
     if(pathname.startsWith('/api/push/')){
       if(push)await push.handle(req,res,pathname);else json(pathname==='/api/push/config'?200:503,pathname==='/api/push/config'?{enabled:false}:{error:'서버의 웹 푸시 설정이 필요합니다. Render 환경 변수와 영구 저장 공간을 확인하세요.'});
       return;
@@ -24,17 +37,21 @@ export function createAppServer({transcript=loadTranscript,push=null}={}) {
       if(origin && origin!==`http://${req.headers.host}` && origin!==`https://${req.headers.host}`){json(403,{error:'앱과 같은 주소에서 요청하세요.'});return;}
       if(!req.headers['content-type']?.startsWith('application/json')){json(415,{error:'JSON 요청이 필요합니다.'});return;}
       if(importing){json(429,{error:'다른 자막을 불러오는 중입니다. 완료 후 다시 시도하세요.'});return;}
-      importing=true;
+      let ownsImport=false;
+      const bodyTimer=setTimeout(()=>req.destroy(),bodyTimeoutMs);
       try {
         let body='';
         for await(const chunk of req){body+=chunk;if(Buffer.byteLength(body)>4096)throw Object.assign(Error('요청이 너무 큽니다.'),{status:413});}
+        clearTimeout(bodyTimer);
         let input;
         try {input=JSON.parse(body);} catch {throw Object.assign(Error('요청 형식이 올바르지 않습니다.'),{status:400});}
         if(!input || typeof input.url!=='string')throw Object.assign(Error('유튜브 주소를 입력하세요.'),{status:400});
         transcriptInput(input.url,input.language);
+        if(importing){json(429,{error:'다른 자막을 불러오는 중입니다. 완료 후 다시 시도하세요.'});return;}
+        importing=true;ownsImport=true;
         json(200,await transcript(input.url,input.language));
       } catch(e){if(Number.isSafeInteger(e.retryAfter) && e.retryAfter>0)res.setHeader('Retry-After',String(e.retryAfter));json(e.status||502,{error:e.status?e.message:'자막을 가져오지 못했습니다. 잠시 후 다시 시도하세요.',code:e.code});}
-      finally{importing=false;}
+      finally{clearTimeout(bodyTimer);if(ownsImport)importing=false;}
       return;
     }
     try {

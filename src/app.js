@@ -73,10 +73,24 @@ function homeTranscriptHTML(){
  const data=homeTranscript.data;
  return `<div class="transcript-panel" aria-labelledby="homeTranscriptTitle"><div class="eyebrow">YOUTUBE SCRIPT</div><h2 id="homeTranscriptTitle">영상 속 표현을 스크립트로 만나보세요</h2><p class="muted">유튜브 주소를 입력하면 아래에 시간별 자막이 표시됩니다. 마음에 드는 문장은 카드로 저장하세요.</p><form id="homeYoutubeForm" class="transcript-form"><label class="transcript-url">유튜브 영상 주소<input name="url" type="url" required value="${esc(homeTranscript.url)}" placeholder="https://www.youtube.com/watch?v=…" ${homeTranscript.busy?'disabled':''}></label><label>자막 언어<select name="language" ${homeTranscript.busy?'disabled':''}>${[['en','영어'],['ko','한국어'],['ja','일본어']].map(([value,label])=>`<option value="${value}" ${value===homeTranscript.language?'selected':''}>${label}</option>`).join('')}</select></label><button class="primary" type="submit" ${homeTranscript.busy?'disabled':''}>${homeTranscript.busy?'불러오는 중…':'스크립트 불러오기'}</button></form>${savedScripts.length?`<label class="saved-scripts">보관한 스크립트<select id="savedScript" ${homeTranscript.busy?'disabled':''}><option value="">스크립트를 선택하세요</option>${savedScripts.map(r=>`<option value="${esc(r.id)}" ${workspace.doc?.id===r.id?'selected':''}>${esc(r.data.title)} · ${esc(r.data.language)} · 표시 ${r.id===workspace.doc?.id?workspace.doc.highlights.length:r.highlights.length}개</option>`).join('')}</select></label>`:''}<p class="transcript-status" role="status" aria-live="polite">${esc(homeTranscript.status)}</p>${data?`<div class="script-launch"><div><strong>${esc(data.title)}</strong><p class="muted">${data.cues.length}개 문장 · 형광펜 ${workspace.doc?.highlights.length||0}개</p></div><button type="button" class="primary" data-view="script">스크립트 작업 화면 열기 →</button></div>`:`<div class="transcript-placeholder">${homeTranscript.busy?'스크립트를 준비하고 있어요.':'영상 주소를 입력하고 스크립트 불러오기를 눌러주세요.'}</div>`}<p class="muted">공개 자막이 있는 영상만 지원합니다. 이용 권한이 있는 자막을 사용하세요.</p></div>`;
 }
+let promptTranscriptAccess='';
+function askTranscriptPassword(){
+ return new Promise(resolve=>{
+  const dialog=document.createElement('dialog');
+  dialog.innerHTML='<form method="dialog"><h2>자막 가져오기 접근 암호</h2><label>관리자가 알려준 암호<input name="password" type="password" autocomplete="off" required maxlength="256"></label><p>암호는 이 탭을 닫거나 새로고침하면 지워집니다.</p><button value="cancel" formnovalidate>취소</button><button value="save">확인</button></form>';
+  dialog.addEventListener('close',()=>{const value=dialog.returnValue==='save'?dialog.querySelector('input').value:'';dialog.remove();resolve(value);},{once:true});
+  document.body.append(dialog);dialog.showModal();
+ });
+}
 async function fetchYoutubeTranscript(url,language,signal){
- const res=await fetch('/api/youtube-transcript',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url,language}),signal});
+ const headers={'Content-Type':'application/json'};
+ const access=promptTranscriptAccess;
+ if(access)headers['X-Transcript-Password']=access;
+ const res=await fetch('/api/youtube-transcript',{method:'POST',headers,body:JSON.stringify({url,language}),signal});
  if(!res.headers.get('content-type')?.includes('application/json'))throw Error('자막 가져오기는 npm start로 실행한 앱에서 사용할 수 있습니다.');
- const data=await res.json();if(!res.ok)throw Error((data.error||'자막을 가져오지 못했습니다.')+(data.code?' [오류 코드: '+data.code+']':''));
+ const data=await res.json();
+ if(res.status===401){promptTranscriptAccess='';const entered=await askTranscriptPassword();if(entered){if(!/^[\x20-\x7e]+$/.test(entered))throw Error('접근 암호는 영문·숫자·기호로 입력해 주세요.');promptTranscriptAccess=entered;}throw Error('접근 암호를 입력했다면 스크립트 불러오기를 다시 눌러 주세요.');}
+ if(!res.ok)throw Error((data.error||'자막을 가져오지 못했습니다.')+(data.code?' [오류 코드: '+data.code+']':''));
  if(!Array.isArray(data.cues)||!data.cues.length)throw Error('가져올 자막이 없습니다.');
  return data;
 }
