@@ -40,13 +40,47 @@ function apiError(message, code, status = 502) {
   return Object.assign(Error(message), {code, status});
 }
 
+const DAY = 24 * 60 * 60000;
+// Process-local only: these counters are NOT a persistent account spending cap.
+function requestLimit(value, fallback) {
+  if (value === undefined) return fallback;
+  if (!/^(0|[1-9][0-9]*)$/.test(String(value)) || Number(value) > 100000)
+    throw apiError('자막 사용 제한 설정을 확인해 주세요. 관리자 확인 전에는 새 요청을 보낼 수 없습니다.', 'API_CONFIG_ERROR', 503);
+  return Number(value);
+}
+function waitError(message, code, retryAfter) {
+  return Object.assign(apiError(message, code, 429), {retryAfter: Math.max(1, Math.ceil(retryAfter / 1000))});
+}
+
 // Fixed HTTPS destination: API keys never reach browser assets or arbitrary URLs.
 export function createSupadataLoader({fetcher = globalThis.fetch, now = Date.now,
   sleep = ms => new Promise(resolve => setTimeout(resolve, ms)),
-  getKey = () => process.env.SUPADATA_API_KEY?.trim()} = {}) {
+  getKey = () => process.env.SUPADATA_API_KEY?.trim(),
+  getLimits = () => ({daily: process.env.SUPADATA_DAILY_REQUEST_LIMIT,
+    monthly: process.env.SUPADATA_30_DAY_REQUEST_LIMIT})} = {}) {
   const cache = new Map();
   const pending = new Map();
+  const failures = new Map();
   let requests = [];
+  let pausedUntil = 0;
+  function reserve() {
+    const configured = getLimits();
+    const daily = requestLimit(configured.daily, 5);
+    const monthly = requestLimit(configured.monthly, 80);
+    const time = now();
+    requests = requests.filter(t => t > time - 30 * DAY);
+    if (!daily || !monthly) throw apiError('새 자막 불러오기가 잠시 중지되었습니다. 저장된 스크립트나 자막 파일을 이용해 주세요.', 'API_IMPORT_DISABLED', 503);
+    for (const [window, limit, code, label] of [[30 * DAY, monthly, 'API_PERIOD_LIMITED', '최근 30일'], [DAY, daily, 'API_DAILY_LIMITED', '최근 24시간'], [60000, 10, 'API_RATE_LIMITED', '최근 1분']]) {
+      const used = requests.filter(t => t > time - window);
+      if (used.length >= limit) {
+        const remaining = used[used.length - limit] + window - time;
+        const wait = remaining > 3600000 ? `${Math.ceil(remaining / 3600000)}시간` : `${Math.max(1, Math.ceil(remaining / 60000))}분`;
+        throw waitError(`${label} 자막 요청 한도에 도달했습니다. 약 ${wait} 후 다시 시도해 주세요. 그동안 저장된 스크립트·자막 파일을 이용할 수 있습니다.`, code, remaining);
+      }
+    }
+    // Reserve BEFORE every HTTP call, including polling. Never refund failures/timeouts.
+    requests.push(time);
+  }
   return async function load({id, language}) {
     const key = getKey();
     if (!key) throw apiError('Render 환경 변수에 SUPADATA_API_KEY를 등록하세요.', 'API_KEY_MISSING', 503);
@@ -54,16 +88,28 @@ export function createSupadataLoader({fetcher = globalThis.fetch, now = Date.now
     const saved = cache.get(cacheKey);
     if (saved && saved.expires > now()) return saved.data;
     if (pending.has(cacheKey)) return pending.get(cacheKey);
-    requests = requests.filter(time => time > now() - 60000);
-    if (requests.length >= 10) throw apiError('자막 요청이 많습니다. 1분 뒤 다시 시도하세요.', 'API_RATE_LIMITED', 429);
-    requests.push(now());
+    const failed = failures.get(cacheKey);
+    if (failed && failed > now()) throw waitError('같은 자막을 다시 요청하기 전에 잠시 기다려 주세요. 이전 요청이 처리되었을 수 있어 중복 사용을 방지하고 있습니다. 자막 파일 가져오기도 이용할 수 있습니다.', 'API_RETRY_COOLDOWN', failed - now());
+    if (pausedUntil > now()) throw waitError('자막 서비스가 잠시 쉬고 있습니다. 나중에 다시 시도하거나 저장된 스크립트·자막 파일을 이용해 주세요.', 'API_SERVICE_PAUSED', pausedUntil - now());
+    if (pending.size >= 2) throw waitError('다른 자막을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.', 'API_BUSY', 60000);
     const promise = retrieve();
     pending.set(cacheKey, promise);
-    try { return await promise; } finally { pending.delete(cacheKey); }
+    try { return await promise; }
+    catch (error) {
+      // Do not repeat possibly billable requests immediately after uncertain failures.
+      if (['API_NETWORK_ERROR', 'API_TIMEOUT', 'API_UPSTREAM_ERROR', 'API_FORMAT_ERROR', 'NO_CAPTIONS'].includes(error.code)) {
+        for (const [id, expiry] of failures) if (expiry <= now()) failures.delete(id);
+        if (failures.size >= 100) failures.delete(failures.keys().next().value);
+        failures.set(cacheKey, now() + 10 * 60000);
+      }
+      if (['API_AUTH_ERROR', 'API_QUOTA_EXCEEDED', 'API_RATE_LIMITED'].includes(error.code)) pausedUntil = now() + 60000;
+      throw error;
+    } finally { pending.delete(cacheKey); }
 
     async function retrieve() {
       const signal = AbortSignal.timeout(55000);
       async function request(path) {
+        reserve();
         let response;
         try {
           response = await fetcher(`https://api.supadata.ai/v1/${path}`, {
@@ -119,7 +165,7 @@ export function createSupadataLoader({fetcher = globalThis.fetch, now = Date.now
       const data = {title: `YouTube · ${id}`, url: `https://www.youtube.com/watch?v=${id}`, language: result.lang,
         automatic: null, provider: 'supadata', cues};
       if (cache.size >= 40) cache.delete(cache.keys().next().value);
-      cache.set(cacheKey, {expires: now() + 30 * 60000, data});
+      cache.set(cacheKey, {expires: now() + DAY, data});
       return data;
     }
   };

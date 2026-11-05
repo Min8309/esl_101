@@ -65,3 +65,11 @@ test('upstream diagnostic code reaches the client without converting it to missi
   const response=await post(base,{url});assert.equal(response.status,429);assert.deepEqual(await response.json(),{error:'YouTube 서버 요청 제한',code:'RATE_LIMITED'});
  });
 });
+
+test('budget limit returns friendly guidance and Retry-After to HTTP clients',async()=>{
+ await withServer(async()=>{throw Object.assign(Error('저장된 스크립트·자막 파일을 이용해 주세요.'),{status:429,code:'API_DAILY_LIMITED',retryAfter:86400});},async base=>{
+  const response=await post(base,{url});assert.equal(response.status,429);
+  assert.equal(response.headers.get('retry-after'),'86400');
+  assert.deepEqual(await response.json(),{error:'저장된 스크립트·자막 파일을 이용해 주세요.',code:'API_DAILY_LIMITED'});
+ });
+});
